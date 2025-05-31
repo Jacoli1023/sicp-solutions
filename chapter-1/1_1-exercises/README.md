@@ -1,10 +1,10 @@
 # [1.1 - The Elements of Programming](https://sarabander.github.io/sicp/html/1_002e1.xhtml#g_t1_002e1)
 
 ### Exercise 1.1
-Below is a sequence of expressions. What is the result printed by the interpreter in response to each expression? Assume that the sequence is to be evaluated in the order in which it is presented. 
+**Below is a sequence of expressions. What is the result printed by the interpreter in response to each expression? Assume that the sequence is to be evaluated in the order in which it is presented.**
 
 Solution:\
-**This is simply putting each expression into the REPL and seeing what it evaluates as, so the format follows what it looks like when putting the expressions in the Racket CLI.**
+This is simply putting each expression into the REPL and seeing what it evaluates as, so the format follows what it looks like when putting the expressions in the Racket CLI.
 
 ```scheme
 > 10
@@ -41,7 +41,7 @@ Solution:\
 ```
 
 ### Exercise 1.2
-**Translate the following expression into prefix form: **
+**Translate the following expression into prefix form:**
 
 Solution:
 ```scheme
