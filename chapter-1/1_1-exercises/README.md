@@ -87,6 +87,6 @@ Certain parts of this solution violate the DRY principle, but the book will inev
 ```
 
 Solution:\
-THis is essentially a function that takes in two arguments, _a_ and _b_, and then provides a conditional check on _b_ such that if _b_ is greater than 0 (is positive), then it returns the + operator, otherwise it returns the - operator. It then uses this operator on the arguments _a_ and _b_.
+This is essentially a function that takes in two arguments, _a_ and _b_, and then provides a conditional check on _b_ such that if _b_ is greater than 0 (is positive), then it returns the + operator, otherwise it returns the - operator. It then uses this operator on the arguments _a_ and _b_.
 
-This function, in effect, does what its name alludes to: it returns $a + \abs{b}$, since subtracting a negative number is equivalent to adding a positive number.
+This function, in effect, does what its name alludes to: it returns $a + |b|$, since subtracting a negative number is equivalent to adding a positive number.
