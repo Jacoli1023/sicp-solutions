@@ -123,6 +123,18 @@ When the numbers are small enough, then they will always pass the `good-enough?`
 
 As the question explains, a better solution to having a fixed-precision-tolerance is to measure the differences between the iterative guesses. When the change is _relatively_ small, rather than based on some arbitrary _absolute_ difference, then we can determine better if the `guess` is good enough. See the modules in [`sqrt.rkt`](./sqrt.rkt) for my solution on this.
 
+Testing it out on really small numbers yields more accurate results:
+```scheme
+> (sqrt 1e-20)
+1.000000000002308e-10
+```
+
+As well as really big numbers (or at least, it now terminates):
+```scheme
+> (sqrt 1e20)
+1.000000000002308e-10
+```
+
 ---
 ### Exercise 1.8
 
