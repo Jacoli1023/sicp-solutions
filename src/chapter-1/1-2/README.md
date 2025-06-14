@@ -74,3 +74,30 @@ Given these procedure definitions, what are their respective mathematical notati
 (f n) computes $2n$, according to the 2nd conditional clause.\
 (g n) computes $2^n$. We can see that with `(A 1 10)`, which would evaluate to `(A 0 (A 1 9))`. This is basically the composition of the _f_ and _g_ functions: `(f (g (- n 1)))`, thus $2 * 2 * 2 \ldots$ or $2^n$.\
 (h n) computes a weird function that is $2^{2^{2^{\ldots}}}$ up to the nth level. `(A 2 n)` evaluates to `(A 1 (A 2 (- n 1)))`; thus the composition is `(g (h (- n 1)))`.
+
+---
+### Exercise 1.11
+Solution:\
+For the recursive process:
+```scheme
+(define (f n)
+  (if (< n 3)
+      n
+      (+ (f (- n 1)) (* 2 (f (- n 2))) (* 3 (f (- n 3))))))
+```
+As is this case for tree recursion, it is a rather straightforward implementation for a recursive process.
+
+Making it an iterative process requires a bit more work:
+```scheme
+(define (f n)
+  (define (iter x y z count)
+    (if (= n count)
+        x
+        (iter y z (+ z (* 2 y) (* 3 x)) (+ count 1))))
+  (iter 0 1 2 0))
+```
+We always need to be aware of the three previous calculations, with the base case being $f(0) = 0$, $f(1) = 1$, and $f(2) = 2$. We are then constantly shifting these answers down until `count` is equal to `n`, and by then the answer for $f(n)$ has shifted to the first parameter in the procedure.
+
+---
+### Exercise 1.12
+
