@@ -73,4 +73,4 @@ Given these procedure definitions, what are their respective mathematical notati
 
 (f n) computes $2n$, according to the 2nd conditional clause.\
 (g n) computes $2^n$. We can see that with `(A 1 10)`, which would evaluate to `(A 0 (A 1 9))`. This is basically the composition of the _f_ and _g_ functions: `(f (g (- n 1)))`, thus $2 * 2 * 2 \ldots$ or $2^n$.\
-(h n) computes a weird function that is $2^(2^(2^\ldots))$ up to the nth level. `(A 2 n)` evaluates to `(A 1 (A 2 (- n 1)))`; thus the composition is `(g (h (- n 1)))`.
+(h n) computes a weird function that is $2^{2^{2^{\ldots}}}$ up to the nth level. `(A 2 n)` evaluates to `(A 1 (A 2 (- n 1)))`; thus the composition is `(g (h (- n 1)))`.
