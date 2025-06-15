@@ -263,3 +263,30 @@ The order of growth for the number of steps (or the number of leaves on the tree
 
 ---
 ### Exercise 1.15
+
+```scheme
+(define (cube x) (* x x x))
+(define (p x) (- (* 3 x) (* 4 (cube x))))
+(define (sine angle)
+   (if (not (> (abs angle) 0.1))
+       angle
+       (p (sine (/ angle 3.0)))))
+```
+
+Solution:\
+1. The procedure p is applied five times:
+```scheme
+(sine 12.15)
+(p (sine 4.05))
+(p (p (sine 1.35)))
+(p (p (p (sine 0.45))))
+(p (p (p (p (sine 0.15)))))
+(p (p (p (p (p (sine 0.05))))))
+```
+
+2. The order of growth for space and number of steps will be the same, since the depth of the stack for the interpreter (space) is dependent on the number of deferred operations in the procedure (number of steps). Both of these, then, are based on the condition for which $a < 0.1$. Thus we get the inequality $a\3^k < 0.1$, where _k_ is the number of times we must perform this operation until the inequality evaluates to true.
+
+Solving for _k_, we get $k > \log 10a / \log 3$. Thus the order of growth is $\Theta(log n)$.
+
+---
+### Exercise 1.16
