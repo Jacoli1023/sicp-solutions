@@ -131,27 +131,31 @@ First, we'll identify the givens, which are the constants $\varphi$ and $\psi$ w
 $$\varphi = \frac{1 + \sqrt{5}}{2},\quad \psi = \frac{1 - \sqrt{5}}{2}$$
 
 Also, the recursive definition of the Fibonacci sequence is given as:
+
 $$
 \begin{aligned}
-Fib(0) &= 0, \\
-Fib(1) &= 1, \\
-Fib(n) &= Fib(n-1) + Fib(n-2)
+\Fib(0) &= 0, \\
+\Fib(1) &= 1, \\
+\Fib(n) &= \Fib(n-1) + \Fib(n-2).
 \end{aligned}
 $$
 
-To begin, we'll do as the hint says and show that $Fib(n) = \dfrac{\varphi^n - \psi^n}{\sqrt{5}}$
+To begin, we'll do as the hint says and show that $\Fib(n) = \dfrac{\varphi^n - \psi^n}{\sqrt{5}}$
 
 We'll start with the base cases of when $n=0$ and $n=1$, respectively:
-$$Fib(0) = \frac{\varphi^0 - \psi^0}{\sqrt{5}} = \frac{1-1}{\sqrt{5}} = 0$$
-$$Fib(1) = \frac{\varphi - \psi}{\sqrt{5}}
+
+$$\Fib(0) = \frac{\varphi^0 - \psi^0}{\sqrt{5}} = \frac{1-1}{\sqrt{5}} = 0.$$
+
+$$\Fib(1) = \frac{\varphi - \psi}{\sqrt{5}}
 = \frac{\frac{1 + \sqrt{5} - 1 + \sqrt{5}}{2}}{\sqrt{5}}
-= \frac{2\sqrt{5}}{2\sqrt{5}} = 1$$
+= \frac{2\sqrt{5}}{2\sqrt{5}} = 1.$$
 
 Now for the induction phase:
+
 $$
 \begin{aligned}
-Fib(n) &= Fib(n-1) + Fib(n-2)
-&= \frac{\varphi^{n-1} - \psi^{n-1}}{\sqrt{5}} + \frac{\varphi^{n-2} - \psi^{n-2}}{\sqrt{5}}
+\Fib(n) &= \Fib(n-1) + \Fib(n-2) \\
+&= \frac{\varphi^{n-1} - \psi^{n-1}}{\sqrt{5}} + \frac{\varphi^{n-2} - \psi^{n-2}}{\sqrt{5}} \\
 &= \frac{\left(\varphi^{n-1} + \varphi^{n-2}\right) - 
          \left(\psi^{n-1} + \psi^{n-2}\right)}{\sqrt{5}} \\
 &= \frac{\varphi^n \left(\varphi^{-1} + \varphi^{-2}\right) - 
@@ -160,9 +164,10 @@ Fib(n) &= Fib(n-1) + Fib(n-2)
          \psi^n\psi^{-1}\left(1 + \psi^{-1}\right)}{\sqrt{5}} \\
 &= \frac{\varphi^n\varphi^{-1}\left(\varphi\right) - 
          \psi^n\psi^{-1}\left(\psi\right)}{\sqrt{5}} \\
-Fib(n) &= \frac{\varphi^n - \psi^n}{\sqrt{5}}
+\Fib(n) &= \frac{\varphi^n - \psi^n}{\sqrt{5}}
 \end{aligned}
 $$
 
-Thus, by induction, we have proved that $Fib(n) = \dfrac{\varphi^n - \psi^n}{\sqrt{5}}$. Now, to show that $Fib(n)$ is the closest integer to $\varphi^n / \sqrt{5}$, it is enough to know that $\psi < 1$. Meaning that as _n_ approaches infinity, $\psi^n$ approaches 0. Thus leaving us with $$Fib(n) = \frac{\varphi^n - 0}{\sqrt{5}} = \frac{\varphi^n}{\sqrt{5}}$$.
+Thus, by induction, we have proved that $\Fib(n) = \dfrac{\varphi^n - \psi^n}{\sqrt{5}}$. Now, to show that $\Fib(n)$ is the closest integer to $\varphi^n / \sqrt{5}$, it is enough to know that $\psi < 1$. Meaning that as _n_ approaches infinity, $\psi^n$ approaches 0. Thus leaving us with:
 
+$$Fib(n) = \frac{\varphi^n - 0}{\sqrt{5}} = \frac{\varphi^n}{\sqrt{5}}$$.
