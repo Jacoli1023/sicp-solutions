@@ -170,4 +170,96 @@ $$
 
 Thus, by induction, we have proved that $Fib(n) = \dfrac{\varphi^n - \psi^n}{\sqrt{5}}$. Now, to show that $Fib(n)$ is the closest integer to $\varphi^n / \sqrt{5}$, it is enough to know that $\psi < 1$. Meaning that as _n_ approaches infinity, $\psi^n$ approaches 0. Thus leaving us with:
 
-$$Fib(n) = \dfrac{\varphi^n - 0}{\sqrt{5}} = \dfrac{\varphi^n}{\sqrt{5}}$$.
+$$Fib(n) = \dfrac{\varphi^n - 0}{\sqrt{5}} = \dfrac{\varphi^n}{\sqrt{5}}.$$
+
+---
+### Exercise 1.14
+```scheme
+(define (count-change amount)
+  (cc amount 5))
+
+(define (cc amount kinds-of-coins)
+  (cond ((= amount 0) 1)
+        ((or (< amount 0) 
+             (= kinds-of-coins 0)) 
+         0)
+        (else 
+         (+ (cc amount (- kinds-of-coins 1))
+            (cc (- amount (first-denomination 
+                           kinds-of-coins))
+                kinds-of-coins)))))
+
+(define (first-denomination kinds-of-coins)
+  (cond ((= kinds-of-coins 1) 1)
+        ((= kinds-of-coins 2) 5)
+        ((= kinds-of-coins 3) 10)
+        ((= kinds-of-coins 4) 25)
+        ((= kinds-of-coins 5) 50)))
+```
+
+Solution:\
+Using the `count-change` procedure to calculate the amount of ways we can make change out of 11 cents produces a tree somewhat like this:
+```scheme
+(cc 11 5)
+  (cc -39 5) ; 0
+  (cc 11 4)
+    (cc -14 4) ; 0
+    (cc 11 3)
+      (cc 1 3)
+        (cc -9 3) ; 0
+        (cc 1 2)
+          (cc -4 2) ; 0
+          (cc 1 1)
+            (cc 0 1) ; 1
+            (cc 1 0) ; 0
+      (cc 11 2)
+        (cc 6 2)
+          (cc 1 2)
+            (cc -4 2) ; 0
+            (cc 1 1)
+              (cc 0 1) ; 1
+              (cc 1 0) ; 0
+          (cc 6 1)
+            (cc 5 1)
+              (cc 4 1)
+                (cc 3 1)
+                  (cc 2 1)
+                    (cc 1 1)
+                      (cc 0 1) ; 1
+                      (cc 1 0) ; 0
+                    (cc 2 0) ; 0
+                  (cc 3 0) ; 0
+                (cc 4 0) ; 0
+              (cc 5 0) ; 0
+            (cc 6 0) ; 0
+        (cc 11 1)
+          (cc 10 1)
+            (cc 9 1)
+              (cc 8 1)
+                (cc 7 1)
+                  (cc 6 1)
+                    (cc 5 1)
+                      (cc 4 1)
+                        (cc 3 1)
+                          (cc 2 1)
+                            (cc 1 1)
+                              (cc 0 1) ; 1
+                              (cc 1 0) ; 0
+                            (cc 2 0) ; 0
+                          (cc 3 0) ; 0
+                        (cc 4 0) ; 0
+                      (cc 5 0) ; 0
+                    (cc 6 0) ; 0
+                  (cc 7 0) ; 0
+                (cc 8 0) ; 0
+              (cc 9 0) ; 0
+            (cc 10 0) ; 0
+          (cc 11 0) ; 0
+```
+
+For tree recursion, the order of growth for space is equal to the depth of the tree, which in this case is $\Theta(n)$, since the depth grows linearly with the input. This is evident in the graph where the tree goes down 11 levels.
+
+The order of growth for the number of steps (or the number of leaves on the tree) I believe is $\Theta(n^d)$, where _d_ is the number of coin denominations we use. Since we are going with 5 coin denominations, the order of growth is $\Theta(n^5)$.
+
+---
+### Exercise 1.15
