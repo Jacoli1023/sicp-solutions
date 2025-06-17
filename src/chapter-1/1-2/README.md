@@ -290,3 +290,78 @@ Solving for _k_, we get $k > \log 10a / \log 3$. Thus the order of growth is $\T
 
 ---
 ### Exercise 1.16
+
+Solution:\
+Using the previously define `square` function:
+
+```scheme
+(define (expt-iter b n)
+  (define (iter a b n)
+    (cond ((= n 0) a)
+          ((even? n) (iter a (square b) (/ n 2)))
+          (else (iter (* a b) b (- n 1)))))
+  (iter 1 b n))
+```
+
+Testing this out:
+```scheme
+> (expt-iter 3 7)
+2187
+> (expt-iter 5 4)
+625
+> (expt-iter 2 5)
+32
+```
+
+---
+### Exercise 1.17
+
+These are given as primitives:
+```scheme
+(define (double x) (+ x x))
+(define (halve x) (/ x 2))
+```
+
+Solution:
+```scheme
+(define (mult a b)
+  (cond ((or (zero? a) (zero? b)) 0)
+        ((even? b) (double (mult a (halve b))))
+        (else (+ a (mult a (- b 1))))))
+```
+
+Testing this out:
+```scheme
+> (mult 3 4)
+12
+> (mult 8 7)
+56
+> (mult 10 5)
+50
+```
+
+---
+### Exercise 1.18
+
+Solution:
+```scheme
+(define (mult-iter a b)
+  (define (iter x a b)
+    (cond ((zero? b) x)
+          ((even? b) (iter x (double a) (halve b)))
+          (else (iter (+ x a) a (- b 1)))))
+  (iter 0 a b))
+```
+
+Testing this out:
+```scheme
+> (mult-iter 3 4)
+12
+> (mult-iter 10 6)
+60
+> (mult-iter 5 7)
+35
+```
+
+---
+### Exercise 1.19
