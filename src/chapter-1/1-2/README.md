@@ -374,13 +374,13 @@ $$
 \begin{aligned}
 T_{pq}(T_{pq}(a,b)) &= T_{pq}(bq + aq + ap, bp + aq) \\
 &= ((bp + aq)q + (bq + aq + ap)q + (bq + aq + ap)p, \\
-&\phantom{= (} (bp + aq)p + (bq + aq + ap)q) \\
+&   (bp + aq)p + (bq + aq + ap)q) \\
 &= (bpq + aq^2 + bq^2 + aq^2 + apq + bpq + apq + ap^2, \\
-&\phantom{= (} bp^2 + apq + bq^2 + aq^2 + apq) \\
+&   bp^2 + apq + bq^2 + aq^2 + apq) \\
 &= (bq^2 + 2bpq + aq^2 + 2apq + aq^2 + ap^2, \\
-&\phantom{= (} bq^2 + bp^2 + aq^2 + 2apq) \\
+&   bq^2 + bp^2 + aq^2 + 2apq) \\
 &= (b(q^2 + 2pq) + a(q^2 + 2pq) + a(q^2 + p^2), \\
-&\phantom{= (} b(q^2 + p^2) + a(q^2 + 2pq))
+&   b(q^2 + p^2) + a(q^2 + 2pq))
 &= T_{p'q'}(a,b)
 \end{aligned}
 $$
