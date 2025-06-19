@@ -365,3 +365,174 @@ Testing this out:
 
 ---
 ### Exercise 1.19
+
+Solution:\
+
+1. Given $T_{pq}(a,b) = (bq + aq + ap, bp + aq)$, we must apply the transformation twice to give us a way for computer $T^n$:
+
+$$
+\begin{aligned}
+T_{pq}(T_{pq}(a,b)) &= T_{pq}(bq + aq + ap, bp + aq) \\
+&= ((bp + aq)q + (bq + aq + ap)q + (bq + aq + ap)p, \\
+&\phantom{= (} (bp + aq)p + (bq + aq + ap)q) \\
+&= (bpq + aq^2 + bq^2 + aq^2 + apq + bpq + apq + ap^2, \\
+&\phantom{= (} bp^2 + apq + bq^2 + aq^2 + apq) \\
+&= (bq^2 + 2bpq + aq^2 + 2apq + aq^2 + ap^2, \\
+&\phantom{= (} bq^2 + bp^2 + aq^2 + 2apq) \\
+&= (b(q^2 + 2pq) + a(q^2 + 2pq) + a(q^2 + p^2), \\
+&\phantom{= (} b(q^2 + p^2) + a(q^2 + 2pq))
+&= T_{p'q'}(a,b)
+\end{aligned}
+$$
+
+From this, we see that $p' = q^2 + p^2$ and $q' = q^2 + 2pq$.
+
+2. The second part of this question is essentially just plugging our findings into the procedure definition:
+
+```scheme
+(define (fib n)
+  (fib-iter 1 0 0 1 n))
+
+(define (fib-iter a b p q count)
+  (cond ((= count 0) b)
+        ((even? count)
+         (fib-iter a 
+                   b 
+                   (+ (* q q) (* p p)) 
+                   (+ (* q q) (* 2 p q)) 
+                   (/ count 2)))
+        (else (iter (+ (* b q) (* a q) (* a p))
+                    (+ (* b p) (* a q))
+                    p
+                    q
+                    (- count 1)))))
+```
+
+Which gives us a $\Theta(\log n)$ time complexity.
+
+---
+### Exercise 1.20
+
+```scheme
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (remainder a b))))
+```
+
+Solution:\
+- For applicative order, we get 4 remainder operations:
+```scheme
+(gcd 206 40)
+(gcd 40 (remainder 206 40))
+(gcd 40 6)
+(gcd 6 (remainder 40 6))
+(gcd 6 4)
+(gcd 4 (remainder 6 4))
+(gcd 4 2)
+(gcd 2 (remainder 4 2))
+(gcd 2 0)
+2
+```
+
+- For normal order, we evaluate `remainder` 18 times. Fourteen times from evaluating `(= b 0)`, and four times at the end when solving for `a`:
+```scheme
+(gcd 206 40)
+(gcd 40 (remainder 206 40))
+(gcd (remainder 206 40) (remainder 40 (remainder 206 40)))
+(gcd (remainder 40 (remainder 206 40))
+     (remainder (remainder 206 40) (remainder 40 (remainder 206 40))))
+(gcd (remainder (remainder 206 40) (remainder 40 (remainder 206 40)))
+     (remainder (remainder 40 (remainder 206 40)) 
+                (remainder (remainder 206 40) (remainder 40 (remainder 206 40)))))
+(remainder (remainder 206 40) 
+           (remainder 40 (remainder 206 40)))
+2
+```
+
+---
+### Exercise 1.21
+
+Solution:\
+Using methods from [`divisors.rkt`](./divisors.rkt):
+
+```scheme
+> (smallest-divisor 199)
+199
+> (smallest-divisor 1999)
+1999
+> (smallest-divisor 19999)
+7
+```
+
+---
+### Exercise 1.22
+
+I used the following code to create my [`primetime.rkt`](./primetime.rkt) module:
+
+```scheme
+(define (timed-prime-test n)
+  (newline)
+  (display n)
+  (start-prime-test n (runtime)))
+
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime (- (runtime) 
+                       start-time))))
+
+(define (report-prime elapsed-time)
+  (display " *** ")
+  (display elapsed-time))
+```
+
+Solution:\
+In [`primesearch.rkt`](./primesearch.rkt):
+
+```scheme
+(define (search-for-primes a b)
+  (define (iter a b)
+    (when (<= a b)
+      (timed-prime-test a)
+      (iter (+ a 2) b)))
+  (iter (if (odd? a) a (+ a 1)) b))
+```
+
+Testing this out for first three primes that are...
+- greater than 1,000:
+
+```
+1009 *** 1
+1013 *** 1
+1019 *** 1
+```
+
+- greater than 10,000:
+
+```
+10007 *** 2
+10009 *** 1
+10037 *** 1
+```
+
+- greater than 100,000:
+
+```
+100003 *** 4
+100019 *** 4
+100043 *** 4
+```
+
+- greater than 1,000,000:
+
+```
+1000003 *** 13
+1000033 *** 12
+1000037 *** 11
+```
+
+For the most part, the data checks out for the $\Theta(\sqrt{n})$ growth prediction, where the elapsed time roughly grows by a factor of $\sqrt{10} \approx 3.16$ as the _n_ grows by powers of 10. I believe this does not reflect in the change between 1,000 and 10,000 because the `runtime` command seems to round up.
+
+It is safe to assume that programs on my machine run in time proportional to the number of steps required for the computation.
+
+---
