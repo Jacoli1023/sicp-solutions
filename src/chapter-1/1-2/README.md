@@ -380,7 +380,7 @@ T_{pq}(T_{pq}(a,b)) &= T_{pq}(bq + aq + ap, bp + aq) \\
 &= (bq^2 + 2bpq + aq^2 + 2apq + aq^2 + ap^2, \\
 &   bq^2 + bp^2 + aq^2 + 2apq) \\
 &= (b(q^2 + 2pq) + a(q^2 + 2pq) + a(q^2 + p^2), \\
-&   b(q^2 + p^2) + a(q^2 + 2pq))
+&   b(q^2 + p^2) + a(q^2 + 2pq)) \\
 &= T_{p'q'}(a,b)
 \end{aligned}
 $$
@@ -536,3 +536,128 @@ For the most part, the data checks out for the $\Theta(\sqrt{n})$ growth predict
 It is safe to assume that programs on my machine run in time proportional to the number of steps required for the computation.
 
 ---
+### Exercise 1.23
+
+Solution:
+
+```scheme
+(define (next n)
+  (if (= n 2)
+    3
+    (+ n 2)))
+```
+
+Substituting this into the `find-divisor` procedure looks like this:
+
+```scheme
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divides? test-divisor n) test-divisor)
+        (else (find-divisor n (next test-divisor)))))
+```
+
+Now for testing these with the 12 primes we found:
+- Greater than 1,000:
+
+```
+1009 *** 1
+1013 *** 1
+1019 *** 1
+```
+
+- Greater than 10,000:
+
+```
+10007 *** 1
+10009 *** 2
+10037 *** 2
+```
+
+` Greater than 100,000:
+
+```
+100003 *** 4
+100019 *** 3
+100043 *** 3
+```
+
+- Greater than 1,000,000:
+
+```
+1000003 *** 8
+1000033 *** 8
+1000037 *** 9
+```
+
+The results do not exactly match up the expectations, though using this `next` procedure does seem to make the search go by a little faster. In the case for finding primes greater than 1 million, it seems to take about 75% of the time. I believe a lot of this fault may stem from the fact that the `(runtime)` procedure has a very low precision, and also rounds up to the nearest integer. This makes comparing results a little difficult.
+
+As for why these results may not match our hypothesis that the search will take half the amount of time, this could be for several reasons. One is due other processes and applications running on the pc, taking up some precious resources. Another could be that the overhead of calling the `next` function, rather than just dealing with primitives (that are most likely optimized in the machine code), could cancel out the benefits that we expected.
+
+---
+### Exercise 1.24
+
+```scheme
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (remainder (square (expmod base (/ exp 2) m))
+                    m))
+        (else (remainder (* base (expmod base (- exp 1) m))
+                         m))))
+
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+
+(define (fast-prime? n times)
+  (or (= times 0)
+      (and (fermat-test n)
+           (fast-prime? n (- times 1)))))
+```
+
+Solution:\
+
+Using the `fast-prime?` predicate instead of the `prime?` predicate means defining `prime?` as:
+
+```scheme
+(define (prime? n)
+  (fast-prime? n 100))
+```
+
+(Rather than changing procedure definitions to test this out, a better way would be to pass in the predicate procedure as an argument to `search-for-primes`. That way we can switch between the two predicates - `prime?` and `fast-prime?` - as we like. However, at this point in the book, using procedures as arguments has not yet been discussed, so I'll just stick to changing the procedure definition.)
+
+These are the results for using this procedure:
+- greater than 1,000:
+
+```
+1009 *** 71
+1013 *** 74
+1019 *** 76
+```
+
+- greater than 10,000:
+
+```
+10007 *** 93
+10009 *** 91
+10037 *** 89
+```
+
+- greater than 100,000:
+
+```
+100003 *** 92
+100019 *** 94
+100043 *** 94
+```
+
+- greater than 1,000,000:
+
+```
+1000003 *** 125
+1000033 *** 121
+1000037 *** 135
+```
+
+Using this procedure did not yield the results I was looking for at all! This made me lose even more faith in the `(runtime)` procedure provided by the sicp language module. My biggest problem is the lack of precision, as well as not providing units for its measurements. What exactly is the time? Milliseconds? Microseconds? Perhaps at a later date I will redo these tests using a different method for measuring runtime.
