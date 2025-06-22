@@ -661,3 +661,85 @@ These are the results for using this procedure:
 ```
 
 Using this procedure did not yield the results I was looking for at all! This made me lose even more faith in the `(runtime)` procedure provided by the sicp language module. My biggest problem is the lack of precision, as well as not providing units for its measurements. What exactly is the time? Milliseconds? Microseconds? Perhaps at a later date I will redo these tests using a different method for measuring runtime.
+
+---
+### Exercise 1.25
+
+```scheme
+(define (new-expmod base exp m)
+  (remainder (fast-expt base exp) m))
+```
+
+Solution:\
+
+This method does indeed work and produces the same result as our previous `expmod` procedure. Here are some tests that show this:
+
+```scheme
+> (expmod 5 9 9)
+8
+> (new-expmod 5 9 9)
+8
+> (expmod 4 7 7)
+4
+> (new-expmod 4 7 7)
+4
+> (expmod 5 11 11)
+5
+> (new-expmod 5 11 11)
+5
+```
+
+The problem with this, however, is that it waits to take the modulo of the number _after_ the exponential has already been computed, whereas the previous method would take the modulo in between recursive calls. This means that the new procedure would have to deal with much bigger numbers than the previous procedure, which could pose a problem when working with big exponentials.
+
+---
+### Exercise 1.26
+
+Solution:\
+The difference between using the square procedure and explicitly using the multiplication operator is that in the former, `square` is called only after the `expmod` procedure has run its course and returned its value, whereas the latter calculates the `expmod` solution twice. This is just how the interpreter evaluates its processes, as it does not know that these are two of the exact same procedure calls. It has now become a tree-recursive process with a time complexity of $\Theta(n)$
+
+---
+### Exercise 1.27
+
+Solution:
+
+```scheme
+(define (fermat-check n)
+  (define (test a)
+    (or (= a 0)
+        (and (= (expmod a n n) a)
+             (test (- a 1)))))
+  (test (- n 1)))
+```
+
+First, we'll check to see if this works for some known prime numbers and known non-prime numbers:
+
+```scheme
+> (fermat-check 13)
+#t
+> (fermat-check 19)
+#t
+> (fermat-check 31)
+#t
+> (fermat-check 21)
+#f
+> (fermat-check 35)
+#f
+> (fermat-check 50)
+#f
+```
+
+Now for the Carmichael numbers:
+```scheme
+> (fermat-check 561)
+#t
+> (fermat-check 1105)
+#t
+> (fermat-check 1729)
+#t
+> (fermat-check 2465)
+#t
+> (fermat-check 2821)
+#t
+> (fermat-check 6601)
+#t
+```
