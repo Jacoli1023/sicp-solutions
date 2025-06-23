@@ -366,7 +366,7 @@ Testing this out:
 ---
 ### Exercise 1.19
 
-Solution:\
+Solution:
 
 1. Given $T_{pq}(a,b) = (bq + aq + ap, bp + aq)$, we must apply the transformation twice to give us a way for computer $T^n$:
 
@@ -616,7 +616,7 @@ As for why these results may not match our hypothesis that the search will take 
            (fast-prime? n (- times 1)))))
 ```
 
-Solution:\
+Solution:
 
 Using the `fast-prime?` predicate instead of the `prime?` predicate means defining `prime?` as:
 
@@ -670,7 +670,7 @@ Using this procedure did not yield the results I was looking for at all! This ma
   (remainder (fast-expt base exp) m))
 ```
 
-Solution:\
+Solution:
 
 This method does indeed work and produces the same result as our previous `expmod` procedure. Here are some tests that show this:
 
@@ -747,7 +747,7 @@ Now for the Carmichael numbers:
 ---
 ### Exercise 1.28
 
-Solution:\
+Solution:
 
 We change our `expmod` procedure to as follows, from [`miller.rkt`](./miller.rkt):
 
