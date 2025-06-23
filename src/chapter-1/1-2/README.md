@@ -743,3 +743,44 @@ Now for the Carmichael numbers:
 > (fermat-check 6601)
 #t
 ```
+
+---
+### Exercise 1.28
+
+Solution:\
+
+We change our `expmod` procedure to as follows, from [`miller.rkt`](./miller.rkt):
+
+```scheme
+(define (square-check? a n)
+  (if (and (not (or (= a 1) (= a (- n 1))))
+           (= (square a) (remainder 1 n)))
+           0
+           (remainder (square a) n)))
+
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp)
+         (square-check? (expmod base (/ exp 2) m) m))
+        (else (remainder (* base (expmod base (- exp 1) m))
+                         m))))
+```
+
+Testing it out, with rewritten `fast-prime?` procedure:
+
+```scheme
+> (fast-prime? 7 5)
+#t
+> (fast-prime? 13 10)
+#t
+> (fast-prime? 50 10)
+#f
+> (fast-prime? 100 10)
+#f
+> (fast-prime? 561 100)
+#f
+> (fast-prime? 1105 200)
+#f
+```
+
+Unlike the Fermat test, this one, as shown, is not fooled by Carmichael numbers.
