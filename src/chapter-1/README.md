@@ -1,0 +1,111 @@
+# [1.3 Formulating Abstractions with Higher-Order Procedures](https://sarabander.github.io/sicp/html/1_002e3.xhtml#g_t1_002e3)
+
+### Exercise 1.29
+
+Solution:\
+From [`integral.rkt`](./integral.rkt):
+
+```scheme
+(define (simpson f a b n)
+  (let ((h (/ (- b a) n)))
+    (define (term k)
+      (* (f (+ a (* k h)))
+         (cond ((or (= k 0) (= k n)) 1)
+               ((odd? k) 4)
+               (else 2))))
+    (* (/ h 3) (sum term 0.0 inc n))))
+```
+
+Comparing Simpson's Rule to the previous `integral` procedure:
+```scheme
+> (integral cube 0 1 0.01)
+0.24998750000000042
+> (simpson cube 0 1 100)
+0.24999999999999992
+> (integral cube 0 1 0.001)
+0.249999875000001
+> (simpson cube 0 1 1000)
+0.2500000000000003
+```
+
+Simpson's Rule is, in fact, more accurate.
+
+---
+### Exercise 1.30
+
+Solution:
+
+```scheme
+(define (sum term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ result (term a)))))
+  (iter a 0))
+```
+
+---
+### Exercise 1.31
+
+Solution:
+
+- recursive process:
+
+```scheme
+(define (product term a next b)
+  (if (> a b)
+      1
+      (* (term a)
+         (product term (next a) next b))))
+```
+
+- iterative process:
+
+```scheme
+(define (product term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (* result (term a)))))
+  (iter a 1))
+```
+
+Using the `product` procedure to define a `factorial` procedure:
+
+```scheme
+(define (factorial n)
+  (product identity 1 inc n))
+```
+
+Tests:
+```scheme
+> (factorial 7)
+5040
+> (factorial 10)
+3628800
+```
+
+And a pi approximation procedure:
+
+```scheme
+(define (approx-pi n)
+  (define (term k)
+    (let ((r (remainder k 2)))
+      (/ (- (+ k 2) r)
+         (+ k r 1))))
+  (* 4 (product term 1 inc n)))
+```
+
+Tests:
+```scheme
+> (approx-pi 100)
+3.1570301764551654
+> (approx-pi 1000)
+3.1431607055322552
+> (approx-pi 10000)
+3.1417497057380084
+> (approx-pi 100000)
+3.141608361277941
+```
+
+The bigger _n_ gets, the closer the procedure comes to computing $\pi$.
