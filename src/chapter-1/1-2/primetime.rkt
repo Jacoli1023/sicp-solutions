@@ -1,5 +1,5 @@
 #lang sicp
-(#%require "divisors.rkt")
+(#%require "prime.rkt")
 (#%provide (all-defined))
 
 (define (timed-prime-test n)

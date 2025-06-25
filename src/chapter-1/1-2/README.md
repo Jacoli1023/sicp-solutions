@@ -454,7 +454,7 @@ Solution:\
 ### Exercise 1.21
 
 Solution:\
-Using methods from [`divisors.rkt`](./divisors.rkt):
+Using methods from [`prime.rkt`](./prime.rkt):
 
 ```scheme
 > (smallest-divisor 199)
