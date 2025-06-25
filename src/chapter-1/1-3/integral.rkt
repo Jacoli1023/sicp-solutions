@@ -1,5 +1,5 @@
 #lang racket
-(require "sum.rkt")
+(require "accumulate.rkt")
 (provide (all-defined-out))
 
 (define (inc x) (+ x 1))
