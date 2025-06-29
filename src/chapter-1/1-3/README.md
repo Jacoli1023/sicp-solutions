@@ -248,10 +248,10 @@ $$
 f(x) &= x \\
 1 + 1/x &= x \\
 x-1 &= 1/x \\
-x^2 - x = 1 \\
+x^2 - x &= 1 \\
 x^2 - x - 1 &= 0 \\
 \dfrac{1 \pm \sqrt{1 + 4}}{2} &= x \\
-\dfrac{1 \pm \sqrt5}{2} &= x
+\dfrac{1 \pm \sqrt5}{2} &= x \\
 &= \varphi.
 \end{aligned}
 $$
@@ -350,7 +350,7 @@ The iterative process requires _k_ to be 11 to get an approximation that is accu
 ---
 ### Exercise 1.38
 
-Solution:\
+Solution:
 
 ```scheme
 (define (approx-e k)
