@@ -513,3 +513,56 @@ Testing this out:
 > (nth-root 6561 8)
 3.0000000000173292
 ```
+
+---
+### Exercise 1.46
+
+Solution:
+
+```scheme
+(define (iterative-improve good-enough? improve-guess)
+  (lambda (x)
+    (define (iter guess)
+      (if (good-enough? guess)
+          guess
+          (iter (improve-guess guess))))
+    (iter x)))
+```
+
+- rewriting `sqrt` procedure:
+
+```scheme
+(define (sqrt x)
+  (define (good-enough? guess)
+    (< (abs (- (square guess) x)) 0.001))
+  (define (improve guess)
+    (average guess (/ x guess)))
+  ((iterative-improve good-enough? improve) 1.0))
+```
+
+Tests:
+```scheme
+> (sqrt 4)
+2.0000000929222947
+> (sqrt 9)
+3.00009155413138
+```
+
+- rewriting `fixed-point`:
+
+```scheme
+(define (fixed-point f first-guess)
+  ((iterative-improve
+    (lambda (guess)
+      (< (abs (- guess (f guess))) tolerance))
+    f) 
+   first-guess))
+```
+
+Tests:
+```scheme
+> (fixed-point cos 1.0)
+0.7390893414033927
+> (fixed-point (lambda (x) (+ 1 (/ 1 x))) 1.0)
+1.6180371352785146
+```
