@@ -277,7 +277,19 @@ Computing $\varphi$ by means of the `fixed-point` procedure:
 (define (f-damp x) (average x (f x)))
 ```
 
-Solution:
+Solution [fixedpoint.rkt](./fixedpoint.rkt):
+
+```scheme
+(define (fixed-point-verbose f first-guess)
+  (define (try guess)
+    (let ((next (f guess)))
+      (display next)
+      (newline)
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+```
 
 - without average damping, the procedure takes 35 steps:
 
@@ -305,7 +317,7 @@ Solution:
 ---
 ### Exercise 1.37
 
-Solution:
+Solution [contfrac.rkt](./contfrac.rkt):
 
 - recursive process:
 ```scheme
@@ -453,7 +465,7 @@ Test checks out:
 ---
 ### Exercise 1.43
 
-Solution:
+Solution [repeated.rkt](./repeated.rkt):
 ```scheme
 (define (repeated f n)
   (if (= n 1)
@@ -517,7 +529,7 @@ Testing this out:
 ---
 ### Exercise 1.46
 
-Solution:
+Solution ([`iterativeimprove.rkt`](./iterativeimprove.rkt)):
 
 ```scheme
 (define (iterative-improve good-enough? improve-guess)
@@ -529,7 +541,7 @@ Solution:
     (iter x)))
 ```
 
-- rewriting `sqrt` procedure:
+- rewriting `sqrt` procedure from [`sqrt.rkt`](../1-1/sqrt.rkt):
 
 ```scheme
 (define (sqrt x)
@@ -548,7 +560,7 @@ Tests:
 3.00009155413138
 ```
 
-- rewriting `fixed-point`:
+- rewriting `fixed-point` from [`fixedpoint.rkt`](./fixedpoint.rkt):
 
 ```scheme
 (define (fixed-point f first-guess)
