@@ -11,4 +11,8 @@ Without any further ado, let's begin!
 ## Exercise solutions
 ### Chapter 1 - Building Abstractions with Procedures
 [1.1 - The Elements of Programming](./src/chapter-1/1-1)\
-[1.2 - Procedures and the Processes They Generate](./src/chapter-1/1-2)
+[1.2 - Procedures and the Processes They Generate](./src/chapter-1/1-2)\
+[1.3 Formulating Abstractions with Higher-Order Procedures](./src/chapter-1/1-3)
+
+### Chapter 2 - Building Abstractions with Data
+[2.1 - Introduction to Data Abstraction](./src/chapter-2/2-1)
