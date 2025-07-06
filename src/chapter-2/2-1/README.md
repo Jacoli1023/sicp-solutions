@@ -74,3 +74,113 @@ Tests:
 > (midpoint-segment a)
 '(1 . 1)
 ```
+
+---
+### Exercise 2.3
+
+```scheme
+(define (area rect)
+  (* (length-rect rect) (width-rect rect)))
+(define (perimeter rect)
+  (+ (* 2 (length-rect rect))
+     (* 2 (width-rect rect))))
+```
+
+Solution:
+
+- the first representation for rectangles is rather simple: via its dimensions, length and width. This easily translates into making a rectangle:
+```scheme
+(define (make-rectangle l w)
+  (cons l w))
+(define (length-rect rect)
+  (car rect))
+(define (width-rect rect)
+  (cdr rect))
+```
+
+This assumes we are creating the rectangle at the origin point. If this is not the case, we can also have our `make-rectangle` constructor also take in a point as an argument, along with creating a selector for the point.
+
+Here are some tests for this representation:
+```scheme
+> (define r (make-rectangle 4 7))
+> (area r)
+28
+> (perimeter r)
+22
+```
+
+- another representation for rectangles is using two corner points. Here's how this representation looks:
+```scheme
+(define (make-rectangle corner)
+  (cons (make-point 0 0) corner))
+(define origin car)
+(define corner cdr)
+(define (length-rect rect)
+  (x-point (corner rect)))
+(define (width-rect rect)
+  (y-point (corner rect)))
+```
+
+Once again, we are assuming one of the points is the origin. If that is not the case, we'd simply have `make-rectangle` accept another point as an argument, and then subtract the x-coords and the y-coords of each point in order to find the length and width, respectively.
+
+Here are some tests using this representation:
+```scheme
+> (define r (make-rectangle (make-point 4 7)))
+> (area r)
+28
+> (perimeter r)
+22
+```
+
+We get the same answer for both representations without needing to change the `area` or `perimeter` procedures at all. Thus, we were successfully able to set up some abstraction barriers between the procedures that occupy different levels within the system.
+
+---
+### Exercise 2.4
+
+```scheme
+(define (cons x y) 
+  (lambda (m) (m x y)))
+
+(define (car z) 
+  (z (lambda (p q) p)))
+```
+
+Solution:
+
+- `cdr` representation:
+```scheme
+(define (cdr z)
+  (z (lambda (p q) q)))
+```
+
+Tests:
+```scheme
+> (car (cons 4 7))
+4
+> (cdr (cons 4 7))
+7
+```
+
+---
+### Exercise 2.5
+
+Solution:
+```scheme
+(define (count-div x y)
+  (define (count z n)
+    (let ((q (/ z y)))
+      (if (integer? q)
+          (count q (+ n 1))
+          n)))
+  (count x 0))
+
+(define (cons a b)
+  (* (expt 2 a)
+     (expt 3 b)))
+(define (car x)
+  (count-div x 2))
+(define (cdr x)
+  (count-div x 3))
+```
+
+`count-div` returns the amount of times some number `x` can be successively divided by another number `y`. We can use this as a helper function for our cons representation which satisfies the result of $2^a * 3^b$. To find the `car` of the pair (represented by _a_ in the equation), we then successively divide the result of the equation by 2. The `cdr` (_b_), we succesively divide by 3.
