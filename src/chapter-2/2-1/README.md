@@ -393,3 +393,58 @@ Thus, the approximate tolerance percentage of the product of two intervals is th
 
 ---
 ### Exercise 2.14
+
+```scheme
+(define (par1 r1 r2)
+  (div-interval 
+   (mul-interval r1 r2)
+   (add-interval r1 r2)))
+
+(define (par2 r1 r2)
+  (let ((one (make-interval 1 1)))
+    (div-interval 
+     one
+     (add-interval 
+      (div-interval one r1) 
+      (div-interval one r2)))))
+```
+
+Solution:
+
+Lem is right. We can see that performing the two computations which are algebraically equivalent results in different answers:
+
+```scheme
+> (define A (make-center-percent 100 5))
+> (define B (make-center-percent 200 10))
+> (percent (par1 A B))
+22.972972972972975
+> (percent (par2 A B))
+6.6750629722921895
+```
+
+When we divide an interval by itself, the center should be 1 with a 0% tolerance percentage. However, we instead get approximately 1 and a decent sized tolerance percentage:
+
+```scheme
+> (center (div-interval A A))
+1.0050125313283207
+> (percent (div-interval A A))
+9.97506234413964
+> (center (div-interval A B))
+0.5075757575757576
+> (percent (div-interval A B))
+14.925373134328362
+```
+
+---
+### Exercise 2.15
+
+Solution:
+
+Yes, Eva is correct. When we limit the amount of times the interpreter is exposed to a variable that represents an uncertainty value, the resulting computation's uncertainty is smaller. This is the case that we see above, where dividing an interval by itself results with an uncertainty value greater than 0%. 
+
+---
+### Exercise 2.16
+
+Solution:
+
+The reason algebraically equivalent expressions may lead to different answers is because each computation of an interval is treated as an independent procedure. The interpreter has no way of knowing that it is computing the same value twice. This is called "the dependency problem" in interval arithmetic, and it is more pronounced in complicated functions where the intervals are repeated multiple times. The best solution to this problem is to rewrite our algebraic expressions to limit the number of times the interpreter is exposed to an interval - such as what Eva suggested above.
