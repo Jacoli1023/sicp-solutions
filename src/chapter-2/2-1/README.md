@@ -282,3 +282,114 @@ However, the width of the product or quotient is not a function of the widths be
 
 ---
 ### Exercise 2.10
+
+Solution:
+
+```scheme
+(define (div-interval x y)
+  (if (and (negative? (lower-bound y)) (positive? (upper-bound y)))
+      (error 'div-interval "can't divide by an interval that spans 0" y)
+      (mul-interval x
+                    (make-interval (/ 1.0 (upper-bound y))
+                                   (/ 1.0 (lower-bound y))))))
+```
+
+---
+### Exercise 2.11
+
+Solution:
+```scheme
+(define (mul-interval x y)
+  (let ((x1 (lower-bound x))
+        (x2 (upper-bound x))
+        (y1 (lower-bound y))
+        (y2 (upper-bound y)))
+    (cond ((positive? x1)
+           (cond ((positive? y1) (make-interval (* x1 y1) (* x2 y2)))
+                 ((negative? y2) (make-interval (* x2 y1) (* x1 y2)))
+                 (else (make-interval (* x2 y1) (* x2 y2)))))
+          ((negative? x2)
+           (cond ((negative? y2) (make-interval (* x2 y2) (* x1 y1)))
+                 ((positive? y1) (make-interval (* x1 y2) (* x2 y1)))
+                 (else (make-interval (* x1 y2) (* x1 y1)))))
+          (else
+           (cond ((positive? y1) (make-interval (* x1 y2) (* x2 y2)))
+                 ((negative? y2) (make-interval (* x2 y1) (* x1 y1)))
+                 (else (make-interval (min (* x2 y1) (* x1 y2))
+                                      (max (* x2 y2) (* x1 y1)))))))))
+```
+
+Doing too much.
+
+---
+### Exercise 2.12
+
+```scheme
+(define (make-center-width c w)
+  (make-interval (- c w) (+ c w)))
+
+(define (center i)
+  (/ (+ (lower-bound i) (upper-bound i)) 
+     2))
+
+(define (width i)
+  (/ (- (upper-bound i) (lower-bound i)) 
+     2))
+```
+
+Solution ([`intervals.rkt`](./intervals.rkt)):
+
+```scheme
+(define (make-center-percent c p)
+  (make-center-width c (* c (/ p 100))))
+(define (percent interval)
+  (* (/ (width interval) (center interval)) 100))
+```
+
+---
+### Exercise 2.13
+
+Solution:
+
+Assuming that the tolerance percentage is small, the simple formula for approximating the percentage tolerance of the product of two intervals is simply _the sum of the tolerance percentages of the factors_.
+
+To show this, consider two intervals _a_ and _b_ represented in center-tolerance form:
+
+$$
+\begin{aligned}
+a &= c_a \pm t_a \\
+b &= c_b \pm t_b
+\end{aligned}
+$$
+
+The product of the two intervals:
+
+$$
+\begin{aligned}
+ab &= (c_a \pm t_a)(c_b \pm t_b) \\
+   &= c_ac_b \pm (c_at_b + c_bt_a) + t_at_b
+\end{aligned}
+$$
+
+Since $t_a$ and $t_b$ are small, we can ignore their product. We are then left with the given center-tolerance form:
+
+$$
+\begin{aligned}
+ab \approx c_ac_b \pm (c_at_b + c_bt_a)
+\end{aligned}
+$$
+
+With the center representing $c_ac_b$ and the tolerance (width) representing the $\pm (c_at_b + c_bt_a)$. Since we care about the tolerance as a percentage, we can the tolerance percentage of the product, _T_, by finding the ratio of the width of interval to the center of the interval:
+
+$$
+\begin{aligned}
+T_{ab} &= t_{ab}/c_{ab} \\
+&= (c_at_b + c_bt_a)/c_ac_b \\
+&= t_b/c_b + t_a/c_a
+\end{aligned}
+$$
+
+Thus, the approximate tolerance percentage of the product of two intervals is the sum of the two intervals' respective tolerance percentages.
+
+---
+### Exercise 2.14

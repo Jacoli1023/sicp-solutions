@@ -19,10 +19,11 @@
                    (max p1 p2 p3 p4))))
 
 (define (div-interval x y)
-  (mul-interval
-   x
-   (make-interval (/ 1.0 (upper-bound y))
-                  (/ 1.0 (lower-bound y)))))
+  (if (and (negative? (lower-bound y)) (positive? (upper-bound y)))
+      (error 'div-interval "can't divide by an interval that spans 0" y)
+      (mul-interval x
+                    (make-interval (/ 1.0 (upper-bound y))
+                                   (/ 1.0 (lower-bound y))))))
 
 (define (width x)
   (/ (- (upper-bound x) (lower-bound x)) 2))
