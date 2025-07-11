@@ -15,4 +15,5 @@ Without any further ado, let's begin!
 [1.3 Formulating Abstractions with Higher-Order Procedures](./src/chapter-1/1-3)
 
 ### Chapter 2 - Building Abstractions with Data
-[2.1 - Introduction to Data Abstraction](./src/chapter-2/2-1)
+[2.1 - Introduction to Data Abstraction](./src/chapter-2/2-1)\
+[2.2 - Hierarchical Data and the Closure Property](./src/chapter-2/2-2)
