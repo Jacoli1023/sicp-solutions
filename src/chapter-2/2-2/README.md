@@ -215,3 +215,97 @@ Tree representation:
 
           3     4
 ```
+
+---
+### Exercise 2.25
+
+```scheme
+(define a (list 1 3 (list 5 7) 9))
+(define b (list (list 7)))
+(define c (list 1 (list 2 (list 3 (list 4 (list 5 (list 6 7)))))))
+
+> a
+'(1 3 (5 7) 9)
+> b
+'((7))
+> c
+'(1 (2 (3 (4 (5 (6 7))))))
+```
+
+Solution:
+
+```scheme
+> (car (cdr (car (cdr (cdr a)))))
+7
+> (car (car b))
+7
+> (car (cdr (car (cdr (car (cdr (car (cdr (car (cdr (car (cdr c))))))))))))
+7
+```
+
+---
+### Exercise 2.26
+
+```scheme
+(define x (list 1 2 3))
+(define y (list 4 5 6))
+```
+
+Solution:
+
+Without putting each expression into the interpreter, I hypothesize that:
+- `append` will create a flat list of each element in `x` and `y` in order - `'(1 2 3 4 5 6)`
+- `cons` will simply put the list `x` as the first element of the list `y` - `'((1 2 3) 4 5 6)`
+- `list` will create a list of two elements: the list `x` and the list `y` - `'((1 2 3) (4 5 6))`
+
+Testing my hypotheses:
+```scheme
+> (append x y)
+'(1 2 3 4 5 6)
+> (cons x y)
+'((1 2 3) 4 5 6)
+> (list x y)
+'((1 2 3) (4 5 6))
+```
+
+My hypotheses were proven to be correct.
+
+---
+### Exercise 2.27
+
+```scheme
+(define x (list (list 1 2) (list 3 4)))
+```
+
+Solution ([`tree-operations.rkt`](./tree-operations.rkt)):\
+There are a couple of methods for constructing the `deep-reverse` procedure. The first is using the `reverse` procedure we built in exercise 2.18 as a guide, and modifying it so also performs the `reverse` on each of the subtrees, recursively. This is what the exercise says we should do:
+```scheme
+(define (deep-reverse ls)
+  (define (iter l1 l2)
+    (cond ((null? l1) l2)
+          ((not (pair? l1)) l1)
+          (else (iter (cdr l1) (cons (deep-reverse (car l1)) l2)))))
+  (iter ls '()))
+```
+
+Another way, and a simpler one to implement, is using the `map` procedure defined earlier in the chapter ([`map.rkt`](./map.rkt)):
+```scheme
+(define (deep-reverse x)
+  (if (pair? x)
+      (map deep-reverse (reverse x))
+      x))
+```
+
+The difference between the two is that the latter method (that uses the `map` procedure) actually reverses the tree as we go down its branches, while the former method travels down the tree's branches, and _then_ starts building up the deep-reversed list. Both, however, return the correct answer:
+```scheme
+> x
+'((1 2) (3 4))
+> (reverse x)
+'((3 4) (1 2))
+> (deep-reverse x)
+'((4 3) (2 1))
+```
+
+---
+### Exercise 2.28
+
