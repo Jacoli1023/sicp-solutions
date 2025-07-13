@@ -13,3 +13,10 @@
           ((not (pair? l1)) l1)
           (else (iter (cdr l1) (cons (deep-reverse (car l1)) l2)))))
   (iter ls '()))
+
+(define (fringe ls)
+  (cond ((null? ls) ls)
+        ((not (pair? ls))
+         (list ls))
+        (else
+         (append (fringe (car ls)) (fringe (cdr ls))))))

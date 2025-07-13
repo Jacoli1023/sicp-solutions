@@ -309,3 +309,88 @@ The difference between the two is that the latter method (that uses the `map` pr
 ---
 ### Exercise 2.28
 
+Solution:
+```scheme
+(define (fringe ls)
+  (cond ((null? ls) ls)
+        ((not (pair? ls))
+         (list ls))
+        (else
+         (append (fringe (car ls)) (fringe (cdr ls))))))
+```
+
+Test:
+```scheme
+> (fringe x)
+'(1 2 3 4)
+> (fringe (list x x))
+'(1 2 3 4 1 2 3 4)
+```
+
+---
+### Exercise 2.29
+
+Solution ([`binary-mobile.rkt`](./binary-mobile.rkt)):
+
+1. selectors `left-branch`, `right-branch`, `branch-length`, and `branch-structure`:
+```scheme
+(define (left-branch mobile)
+  (car mobile))
+(define (right-branch mobile)
+  (cadr mobile))
+
+(define (branch-length branch)
+  (car branch))
+(define (branch-structure branch)
+  (cadr branch))
+```
+
+2. `total-weight` procedure (`branch-weight` will also be used in the next part of this problem, hence why it is not an internal definition):
+```scheme
+(define (branch-weight branch)
+  (let ((struct (branch-structure branch)))
+    (if (number? struct)
+        struct
+        (total-weight struct))))
+
+(define (total-weight mobile)
+  (+ (branch-weight (left-branch mobile))
+     (branch-weight (right-branch mobile))))
+```
+
+3. `balanced?` predicate procedure:
+```scheme
+(define (torque branch)
+  (* (branch-length branch)
+     (branch-weight branch)))
+
+(define (balanced? mobile)
+  (define (branch-balanced? branch)
+    (let ((struct (branch-structure branch)))
+      (or (number? struct)
+          (balanced? struct))))
+  (let ((left (left-branch mobile))
+        (right (right-branch mobile)))
+    (and (= (torque left) (torque right))
+         (branch-balanced? left)
+         (branch-balanced? right))))
+```
+
+4. changing the representation of mobiles as:
+```scheme
+(define (make-mobile left right)
+  (cons left right))
+
+(define (make-branch length structure)
+  (cons length structure))
+```
+We would not have to change much if we were using `cons` to construct our mobiles as opposed to `list`. We would just have to change our `branch-structure` selector and our `right-branch` selector to be a `cdr`, as opposed to a `cadr`:
+```scheme
+(define (branch-structure branch)
+  (cdr branch))
+
+(define (right-branch mobile)
+  (cdr mobile))
+```
+
+---
