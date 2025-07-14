@@ -394,3 +394,106 @@ We would not have to change much if we were using `cons` to construct our mobile
 ```
 
 ---
+### Exercise 2.30
+
+Solution ([`tree-operations.rkt`](./tree-operations.rkt)):
+
+- `square-tree` without higher-order procedures:
+```scheme
+(define (square-tree tree)
+  (cond ((null? tree) tree)
+        ((not (pair? tree))
+         (square tree))
+        (else
+         (cons (square-tree (car tree))
+               (square-tree (cdr tree))))))
+```
+
+- `square-tree` using `map`:
+```scheme
+(define (square-tree tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (square-tree sub-tree)
+             (square sub-tree)))
+       tree))
+```
+
+Both return the same results for the test:
+```scheme
+> (square-tree
+   (list 1
+         (list 2 (list 3 4) 5)
+         (list 6 7)))
+'(1 (4 (9 16) 25) (36 49))
+```
+
+---
+### Exercise 2.31
+
+Solution ([`map.rkt`](./map.rkt)):
+
+- direct definition:
+```scheme
+(define (tree-map proc tree)
+  (cond ((null? tree) tree)
+        ((not (pair? tree))
+         (proc tree))
+        (else
+         (cons (tree-map proc (car tree))
+               (tree-map proc (cdr tree))))))
+
+(define (square-tree tree)
+  (tree-map square tree))
+```
+
+- using `map`
+```scheme
+(define (tree-map proc tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (tree-map proc sub-tree)
+             (proc sub-tree)))
+       tree))
+
+(define (square-tree tree)
+  (tree-map square tree))
+```
+
+---
+### Exercise 2.32
+
+Solution ([`list-operations.rkt`](./list-operations.rkt)):
+```scheme
+(define (subsets s)
+  (if (null? s)
+      (list '())
+      (let ((rest (subsets (cdr s))))
+        (append rest 
+                (map (lambda (x)
+                       (cons (car s) x))
+                     rest)))))
+```
+
+This problem is somewhat analogous to the `count-change` procedure from before, where we first find the powerset of a set including all but the first element, and union that with the same powerset but where each element is expanded with the first element.
+
+This works in the procedure by first recursively `cdr`ing down the original set until we are left with an empty list ('(), which is actually a part of the powerset). We begin building our powerset by following a couple rules: first we include every element that was part of the returned list in the recursive call, and then we append unique elements by combining (`cons`ing) each of those previous elements with the next element in the sublist.
+
+Thus with the list `'(1 2 3)`, we first `cdr` down the list until we reach the empty list `'()`. Then the powerset is built like so:
+```scheme
+; start with the empty list
+(())
+
+; for each element in the constructed list, expand it with
+; an element not included in the powerset so far.
+; this will end up being 3 because of recursive call unwinding,
+; include each newly expanded element as a unique element to the list
+(() (3))
+
+; once again, expand each element with another element of the original set,
+; this will be 2 due to recursive unwinding
+(() (3) (2) (2 3))
+
+; continue until you've exhausted each element of the original set
+...
+```

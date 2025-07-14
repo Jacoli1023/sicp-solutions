@@ -33,3 +33,12 @@
         l2
         (iter (cdr l1) (cons (car l1) l2))))
   (iter items '()))
+
+(define (subsets s)
+  (if (null? s)
+      (list '())
+      (let ((rest (subsets (cdr s))))
+        (append rest 
+                (map (lambda (x)
+                       (cons (car s) x))
+                     rest)))))
