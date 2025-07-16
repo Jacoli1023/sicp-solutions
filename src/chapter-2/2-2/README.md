@@ -497,3 +497,83 @@ Thus with the list `'(1 2 3)`, we first `cdr` down the list until we reach the e
 ; continue until you've exhausted each element of the original set
 ...
 ```
+
+---
+### Exercise 2.33
+
+[`accumulate`](./sequence-operations.rkt):
+```scheme
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence)
+          (accumulate op initial (cdr sequence)))))
+```
+
+Solution:
+```scheme
+(define (map p sequence)
+  (accumulate 
+   (lambda (x y) (cons (p x) y))
+   '()
+   sequence))
+
+(define (append seq1 seq2)
+  (accumulate cons seq2 seq1))
+
+(define (length sequence)
+  (accumulate
+   (lambda (x n) (+ n 1))
+   0
+   sequence))
+```
+
+---
+### Exercise 2.34
+
+Solution ([`horner.rkt`](./horner.rkt):
+```scheme
+(define (horner-eval x coefficient-sequence)
+  (accumulate
+   (lambda (this-coeff higher-terms)
+     (+ (* higher-terms x) this-coeff))
+   0
+   coefficient-sequence))
+```
+
+Test:
+```scheme
+> (horner-eval 2 (list 1 3 0 5 0 1))
+79
+```
+
+---
+### Exercise 2.35
+
+Solution ([`sequence-operations.rkt`](./sequence-operations.rkt)):
+```scheme
+(define (count-leaves t)
+  (accumulate
+   +
+   0
+   (map (lambda (x) 1)
+        (enumerate-tree t))))
+```
+
+This was a rather roundabout way of counting the leaves of a tree, simply because the exercise forced us to use the `map` procedure. A much simpler way of performing this operation is as follows:
+```scheme
+(define (count-leaves t)
+  (length (enumerate-tree t)))
+```
+
+Which intrinsically still uses the `accumulate` procedure.
+
+Test:
+```scheme
+> (count-leaves (list (list 1 (list 2 3) 4) (list 5 6 7 (list 8 9))))
+9
+```
+
+---
+### Exercise 2.36
+
