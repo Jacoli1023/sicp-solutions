@@ -577,3 +577,124 @@ Test:
 ---
 ### Exercise 2.36
 
+Solution:
+```scheme
+(define (accumulate-n op init seqs)
+  (if (null? (car seqs))
+      '()
+      (cons (accumulate op init (map car seqs))
+            (accumulate-n op init (map cdr seqs)))))
+```
+
+Test:
+```scheme
+> (define s '((1 2 3) (4 5 6) (7 8 9) (10 11 12)))
+> (accumulate-n + 0 s)
+'(22 26 30)
+```
+
+---
+### Exercise 2.37
+
+Solution ([`matrix.rkt`](./matrix.rkt)):
+```scheme
+(define (matrix-*-vector m v)
+  (map (lambda (w) (dot-product w v)) m))
+
+(define (transpose mat)
+  (accumulate-n cons '() mat))
+
+(define (matrix-*-matrix m n)
+  (let ((cols (transpose n)))
+    (map (lambda (m-vec)
+           (matrix-*-vector cols m-vec)) 
+         m)))
+```
+
+---
+### Exercise 2.38
+
+```scheme
+(define (fold-left op initial sequence)
+  (define (iter result rest)
+    (if (null? rest)
+        result
+        (iter (op result (car rest))
+              (cdr rest))))
+  (iter initial sequence))
+
+(define fold-right accumulate)
+```
+
+Solution:
+```scheme
+> (fold-right / 1 (list 1 2 3))
+3/2
+> (fold-left / 1 (list 1 2 3))
+1/6
+> (fold-right list '() (list 1 2 3))
+'(1 (2 (3 ())))
+> (fold-left list '() (list 1 2 3))
+'(((() 1) 2) 3)
+```
+
+Since `fold-left` works in the opposite direction, it accumulates and applies operations on the elements of a list in the reverse order of the `fold-right`, or `accumulate`, procedure. To guarantee that the two procedures will produce the same values for any sequence, the `op` needs to satisfy the _commutative_ and the _associative_ properties.
+
+---
+### Exercise 2.39
+
+Solution:
+
+- using `fold-right` (traditional `accumulate`):
+```scheme
+(define (reverse sequence)
+  (fold-right
+   (lambda (x y) (append y (list x)))
+   '()
+   sequence))
+```
+
+test:
+```scheme
+> (reverse (list 1 2 3))
+'(3 2 1)
+```
+
+- using `fold-left` (iterative, reversed `accumulate`):
+```scheme
+(define (reverse sequence)
+  (fold-left
+   (lambda (x y) (cons y x))
+   '()
+   sequence))
+```
+
+test:
+```scheme
+> (reverse (list 1 2 3))
+'(3 2 1)
+```
+
+---
+### Exercise 2.40
+
+Solution ([`prime-sum-pairs.rkt`](./prime-sum-pairs.rkt)):
+```scheme
+(define (unique-pairs n)
+  (flatmap (lambda (i) 
+            (map (lambda (j) (list i j))
+                 (enumerate-interval 1 (- i 1))))
+            (enumerate-interval 1 n)))
+```
+
+Thus, the simplified version of `prime-sum-pairs` is:
+```scheme
+(define (prime-sum-pairs n)
+  (map make-pair-sum (filter prime-sum? (unique-pairs n))))
+```
+
+Tests:
+```scheme
+> (prime-sum-pairs 5)
+'((2 1 3) (3 2 5) (4 1 5) (4 3 7) (5 2 7))
+```

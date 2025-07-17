@@ -24,6 +24,25 @@
         (else (append (enumerate-tree (car tree))
                       (enumerate-tree (cdr tree))))))
 
+(define (accumulate-n op init seqs)
+  (if (null? (car seqs))
+      '()
+      (cons (accumulate op init (map car seqs))
+            (accumulate-n op init (map cdr seqs)))))
+
+(define fold-right accumulate)
+
+(define (fold-left op initial sequence)
+  (define (iter result rest)
+    (if (null? rest)
+        result
+        (iter (op result (car rest))
+              (cdr rest))))
+  (iter initial sequence))
+
+(define (flatmap proc seq)
+  (accumulate append '() (map proc seq)))
+
 ; --- redefining procedures using the above sequence operations ---
 (define (map p sequence)
   (accumulate 
@@ -46,3 +65,9 @@
    0
    (map (lambda (x) 1)
         (enumerate-tree t))))
+
+(define (reverse sequence)
+  (fold-left
+   (lambda (x y) (append (list y) x))
+   '()
+   sequence))
