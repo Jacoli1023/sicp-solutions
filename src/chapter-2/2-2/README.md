@@ -698,3 +698,175 @@ Tests:
 > (prime-sum-pairs 5)
 '((2 1 3) (3 2 5) (4 1 5) (4 3 7) (5 2 7))
 ```
+
+---
+### Exercise 2.41
+
+Solution ([`triple-sums.rkt`](./triple-sums.rkts)):
+```scheme
+(define (unique-triples n)
+  (flatmap (lambda (i)
+             (flatmap (lambda (j)
+                        (map (lambda (k) (list i j k))
+                             (enumerate-interval 1 (- j 1))))
+                      (enumerate-interval 1 (- i 1))))
+           (enumerate-interval 1 n)))
+
+(define (triple-sums n s)
+  (filter (lambda (triple)
+            (= (+ (car triple) (cadr triple) (caddr triple)) s))
+          (unique-triples n)))
+```
+
+Test:
+```scheme
+> (triple-sums 8 10)
+'((5 3 2) (5 4 1) (6 3 1) (7 2 1))
+```
+
+---
+### Exercise 2.42
+
+```scheme
+(define (queens board-size)
+  (define (queen-cols k)
+    (if (= k 0)
+        (list empty-board)
+        (filter (lambda (positions) (safe? k positions))
+                (flatmap
+                 (lambda (rest-of-queens)
+                   (map (lambda (new-row)
+                          (adjoin-position new-row k rest-of-queens))
+                        (enumerate-interval 1 board-size)))
+                 (queen-cols (- k 1))))))
+  (queen-cols board-size board-size))
+```
+
+Solution:\
+
+There are multiple parts to this exercise, so we'll break it down into smaller pieces. Starting with the easiest, yet most open-ended, portion, we need to determine how we're going to represent a chess board and the queens' positions. I've decided that a set of board positions will be represented as a list of lists, where the sublists represent the coordinates of each queen's position (along an x- and y-axis):
+```scheme
+(define (make-position row col)
+  (list row col))
+(define (get-row pos)
+  (car pos))
+(define (get-col pos)
+  (cadr pos))
+```
+
+That naturally means that an empty board, a board without any queens in position, is simply just an empty list:
+```scheme
+(define empty-board '())
+```
+
+Now, to adjoin a new row-column position to the board, to make things easy to work with, we will just simply create the new position - using our `make-position` constructor - and put that new position at the front of the list using `cons`:
+```scheme
+(define (adjoin-position row col board)
+  (cons (make-position row col) board))
+```
+
+This makes things simpler for us as we go through the list of positions since the newest queen we wish to add will always be at the front of the list of positions. Then we can check if that new queens is put in check by any of the previous queens already on the board.
+
+That leads us to the next, and most difficult portion of the problem - the logic behind if one queen is put in check by any other. We use this procedure to check if the newly added queen is in a safe position on the board. My solution to this is a bit ugly, went a little too ham on the internal definitions and variables, but screw it we ball:
+```scheme
+(define (safe? k positions)
+  (define (attacks? queen1 queen2)
+    (let ((row1 (get-row queen1))
+          (col1 (get-col queen1))
+          (row2 (get-row queen2))
+          (col2 (get-col queen2)))
+      (or (= row1 row2) ; same row
+          (= col1 col2) ; same col
+          (= (+ row1 col1)
+             (+ row2 col2)) ; same upwards diag
+          (= (- row1 col1)
+             (- row2 col2))))) ; same downwards diag
+  (let ((k-queen (car positions)))
+    (define (helper rest-of-queens)
+      (cond ((null? rest-of-queens) #t)
+            ((attacks? k-queen (car rest-of-queens)) #f)
+            (else (helper (cdr rest-of-queens)))))
+    (helper (cdr positions))))
+```
+
+The main two pieces of logic behind this mega-procedure is checking if the new queen (defined as `k-queen` in the `let` body) is "attacking" or put in check by the queen in the next column over. If not, it checks the next queen, and the queen after, etc. until we reach the end of the list of positions. Once we reach the end of the board and the new queen has not been put in check by any of the previous queens, we know that this new queen is safe. 
+
+The majority of this logic comes from the `attacks?` predicate procedure. However, using some simple arithmetic, we can deduce if two given queens are in the same column, the same row, or on the same diagonal.
+
+To make things prettier, I think it would be better if I brought the internal `attacks?` procedure to the top level of the program, and if I got rid of the `helper` procedure. To get rid of the `helper` procedure, I would need to rework the logic for traversing down the set of positions, so that instead of needing to define the `k-queen` in the let, I think I would just create a `remove` procedure which removes the given queen's position from the list of positions, using the `filter` procedure in our [sequence operations module](./sequence-operations.rkt).
+
+Also, as it stands, my `safe?` procedure does not use the passed in `k` parameter at all. I think this would be used if our `adjoin-position` stuck our new queen any where else in the list. However, since we know our new queen is always at the front, we have no need for the `k` variable to determine where our queen is. I left it in the argument list anyway, however, since that's what the original exercise uses.
+
+Anyway, without further exposition, here we can check one of the solutions given to us when we test our procedure on a 4x4 and an 8x8 board size:
+```scheme
+> (car (queens 4))
+'((3 4) (1 3) (4 2) (2 1))
+> (car (queens 8))
+'((4 8) (2 7) (7 6) (3 5) (6 4) (8 3) (5 2) (1 1))
+```
+
+To visualize this on a chess board would allow our monkey-brains to better understand if the procedure is working or not:
+
+- 4x4 chess board:
+```
+'((3 4) (1 3) (4 2) (2 1))
+|---|---|---|---|
+|   |   | X |   |
+|---|---|---|---|
+| X |   |   |   |
+|---|---|---|---|
+|   |   |   | X |
+|---|---|---|---|
+|   | X |   |   |
+|---|---|---|---|
+```
+
+- 8x8 chess board:
+```
+'((4 8) (2 7) (7 6) (3 5) (6 4) (8 3) (5 2) (1 1))
+|---|---|---|---|---|---|---|---|
+| X |   |   |   |   |   |   |   |
+|---|---|---|---|---|---|---|---|
+|   |   |   |   |   |   | X |   |
+|---|---|---|---|---|---|---|---|
+|   |   |   |   | X |   |   |   |
+|---|---|---|---|---|---|---|---|
+|   |   |   |   |   |   |   | X |
+|---|---|---|---|---|---|---|---|
+|   | X |   |   |   |   |   |   |
+|---|---|---|---|---|---|---|---|
+|   |   |   | X |   |   |   |   |
+|---|---|---|---|---|---|---|---|
+|   |   |   |   |   | X |   |   |
+|---|---|---|---|---|---|---|---|
+|   |   | X |   |   |   |   |   |
+|---|---|---|---|---|---|---|---|
+```
+
+We can thus see that no queens put each other in check. We can also check to see if our procedure is correct for _every_ solution it creates by enumerating through our procedure with the interval [0, 8], and checking to see if the number of our solutions matches that of the [A000170's](https://oeis.org/A000170) number of solutions:
+```scheme
+> (map (lambda (n) (length (queens n))) (enumerate-interval 0 8))
+'(1 1 0 0 2 10 4 40 92)
+```
+
+And indeed it does!
+
+---
+### Exercise 2.43
+
+```scheme
+(flatmap
+ (lambda (new-row)
+   (map (lambda (rest-of-queens)
+          (adjoin-position 
+           new-row k rest-of-queens))
+        (queen-cols (- k 1))))
+ (enumerate-interval 1 board-size))
+```
+
+Solution:\
+The reason that this solution takes so much longer is because for _every single new row added_ (when returning our `enumerate-interval` result), the procedure runs through the `queen-cols` procedure all over again, in its entirety. Our original procedure, only has to run `queen-cols` _n_ times, not including the base case.
+
+Our original run-time is $O(n^2)$, yet Louis's run-time is gonna be more like $O(n^n)$. If our run-time takes _T_ time, then his will take about T^n time.
+
+---
