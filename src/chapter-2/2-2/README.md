@@ -742,7 +742,7 @@ Test:
   (queen-cols board-size board-size))
 ```
 
-Solution:\
+Solution:
 
 There are multiple parts to this exercise, so we'll break it down into smaller pieces. Starting with the easiest, yet most open-ended, portion, we need to determine how we're going to represent a chess board and the queens' positions. I've decided that a set of board positions will be represented as a list of lists, where the sublists represent the coordinates of each queen's position (along an x- and y-axis):
 ```scheme
@@ -867,6 +867,41 @@ And indeed it does!
 Solution:\
 The reason that this solution takes so much longer is because for _every single new row added_ (when returning our `enumerate-interval` result), the procedure runs through the `queen-cols` procedure all over again, in its entirety. Our original procedure, only has to run `queen-cols` _n_ times, not including the base case.
 
-Our original run-time is $O(n^2)$, yet Louis's run-time is gonna be more like $O(n^n)$. If our run-time takes _T_ time, then his will take about T^n time.
+Our original run-time is $O(n^2)$, yet Louis's run-time is gonna be more like $O(n^n)$. If our run-time takes _T_ time, then his will take about _T^n_ time.
 
 ---
+
+For the rest of the solutions in the chapter - those that concern the picture language example in the book - I will be using the [SICP picture langauge](https://docs.racket-lang.org/sicp-manual/SICP_Picture_Language.html) included within the Racket language library. This language works slightly differently than the examples in the book, mainly through explicitly calling the `paint` procedure in order to print the picture. But since we are still implementing painter operations as Scheme procedures, then the solutions will be no different than those that are expected from the book.
+
+Of course, since I cannot easily show my test results to prove that these procedures return what's expected, you'll either have to test them out yourself or just trust me! :)
+
+---
+### Exercise 2.44
+
+Solution ([`pict-split.rkt`](./pict-split.rkt)):
+```scheme
+(define (up-split painter n)
+  (if (= n 0)
+      painter
+      (let ((smaller (up-split painter (- n 1))))
+        (below painter (beside smaller smaller)))))
+```
+
+---
+### Exercise 2.45
+
+```scheme
+(define right-split (split beside below))
+(define up-split (split below beside))
+```
+
+Solution:
+```scheme
+(define (split op op-split)
+  (define (splitter painter n)
+    (if (= n 0)
+        painter
+        (let ((smaller (splitter painter (- n 1))))
+          (op painter (op-split smaller smaller)))))
+  splitter)
+```
