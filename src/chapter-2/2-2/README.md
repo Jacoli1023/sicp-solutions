@@ -905,3 +905,73 @@ Solution:
           (op painter (op-split smaller smaller)))))
   splitter)
 ```
+
+---
+### Exercise 2.46
+
+Solution ([`vector.rkt`](./vector.rkt)):
+```scheme
+; vector representation (interface)
+(define (make-vect x y)
+  (cons x y))
+(define (xcor-vect vect)
+  (car vect))
+(define (ycor-vect vect)
+  (cdr vect))
+
+; vector arithmetic (implementation)
+(define (add-vect v1 v2)
+  (make-vect (+ (xcor-vect v1) (xcor-vect v2))
+             (+ (ycor-vect v1) (ycor-vect v2))))
+
+(define (sub-vect v1 v2)
+  (make-vect (- (xcor-vect v1) (xcor-vect v2))
+             (- (ycor-vect v1) (ycor-vect v2))))
+
+(define (scale-vect v s)
+  (make-vect (* s (xcor-vect v))
+             (* s (ycor-vect v))))
+```
+
+Quick tests:
+```scheme
+> (define v (make-vect 1 2))
+> (define u (make-vect 3 4))
+> (add-vect v u)
+'(4 . 6)
+> (sub-vect u v)
+'(2 . 2)
+> (scale-vect v 2)
+'(2 . 4)
+```
+
+---
+### Exercise 2.47
+
+Solution:
+
+- list representation:
+```scheme
+(define (make-frame origin edge1 edge2)
+  (list origin edge1 edge2))
+
+(define (origin-frame frame)
+  (car frame))
+(define (edge1-frame frame)
+  (cadr frame))
+(define (edge2-frame frame)
+  (caddr frame))
+```
+
+- nested `cons` representation
+```scheme
+(define (make-frame origin edge1 edge2)
+  (cons origin (cons edge1 edge2)))
+
+(define (origin-frame frame)
+  (car frame))
+(define (edge1-frame frame)
+  (cadr frame))
+(define (edge2-frame frame)
+  (cddr frame))
+```
