@@ -975,3 +975,110 @@ Solution:
 (define (edge2-frame frame)
   (cddr frame))
 ```
+
+---
+### Exercise 2.48
+
+Solution ([`segment.rkt`](./segment.rkt)):
+```scheme
+(define (make-segment v1 v2)
+  (cons v1 v2))
+(define (start-segment seg)
+  (car seg))
+(define (end-segment seg)
+  (cdr seg))
+```
+
+---
+### Exercise 2.49
+
+Solution ([`painter.rkt`](./painter.rkt)):
+
+- frame outline
+```scheme
+(define outline
+  (segments->painter
+   (list
+    (make-segment (make-vect 0 0) (make-vect 1 0))
+    (make-segment (make-vect 1 0) (make-vect 1 1))
+    (make-segment (make-vect 1 1) (make-vect 0 1))
+    (make-segment (make-vect 0 1) (make-vect 0 0)))))
+```
+
+- X
+```scheme
+(define x-painter
+  (segments->painter
+   (list
+    (make-segment (make-vect 0 0) (make-vect 1 1))
+    (make-segment (make-vect 0 1) (make-vect 1 0)))))
+```
+
+- diamond
+```scheme
+(define diamond
+  (segments->painter
+   (list
+    (make-segment (make-vect 0.5 0) (make-vect 1 0.5))
+    (make-segment (make-vect 1 0.5) (make-vect 0.5 1))
+    (make-segment (make-vect 0.5 1) (make-vect 0 0.5))
+    (make-segment (make-vect 0 0.5) (make-vect 0.5 0)))))
+```
+
+- wave!
+```scheme
+(define wave
+  (segments->painter
+   (list
+    (make-segment (make-vect 0.4 0) (make-vect 0.5 0.3))
+    (make-segment (make-vect 0.5 0.3) (make-vect 0.6 0))
+    (make-segment (make-vect 0.65 0) (make-vect 0.55 0.55))
+    (make-segment (make-vect 0.55 0.55) (make-vect 1 0.3))
+    (make-segment (make-vect 1 0.4) (make-vect 0.55 0.65))
+    (make-segment (make-vect 0.55 0.65) (make-vect 0.65 0.75))
+    (make-segment (make-vect 0.65 0.75) (make-vect 0.55 1))
+    (make-segment (make-vect 0.45 1) (make-vect 0.35 0.75))
+    (make-segment (make-vect 0.35 0.75) (make-vect 0.45 0.65))
+    (make-segment (make-vect 0.45 0.65) (make-vect 0.25 0.55))
+    (make-segment (make-vect 0.25 0.55) (make-vect 0 0.75))
+    (make-segment (make-vect 0 0.65) (make-vect 0.25 0.5))
+    (make-segment (make-vect 0.25 0.5) (make-vect 0.45 0.55))
+    (make-segment (make-vect 0.45 0.55) (make-vect 0.35 0)))))
+```
+
+---
+### Exercise 2.50
+
+Solution ([`pict-transform.rkt`](./pict-transform.rkt)):
+
+- `flip-horiz`:
+```scheme
+(define (flip-horiz painter)
+  (transform-painter
+   painter
+   (make-vect 1.0 0.0)
+   (make-vect 0.0 0.0)
+   (make-vect 1.0 1.0)))
+```
+
+- `rotate180`:
+```scheme
+(define (rotate180 painter)
+  (transform-painter painter
+                     (make-vect 1.0 1.0)
+                     (make-vect 0.0 1.0)
+                     (make-vect 1.0 0.0)))
+```
+
+- `rotate270`:
+```scheme
+(define (rotate270 painter)
+  (transform-painter painter
+                     (make-vect 0.0 1.0)
+                     (make-vect 0.0 0.0)
+                     (make-vect 1.0 1.0)))
+```
+
+---
+### Exercise 2.51
+
