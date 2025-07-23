@@ -1082,3 +1082,56 @@ Solution ([`pict-transform.rkt`](./pict-transform.rkt)):
 ---
 ### Exercise 2.51
 
+Solution:
+
+- analogous procedure:
+```scheme
+(define (below painter1 painter2)
+  (let ((split-point (make-vect 0.0 0.5)))
+    (let ((paint-bottom (transform-painter
+                        painter1
+                        (make-vect 0.0 0.0)
+                        (make-vect 1.0 0.0)
+                        split-point))
+          (paint-top (transform-painter
+                      painter2
+                      split-point
+                      (make-vect 1.0 0.5)
+                      (make-vect 0.0 1.0))))
+      (lambda (frame)
+        (paint-bottom frame)
+        (paint-top frame)))))
+```
+
+- series of transformations:
+```scheme
+(define (below painter1 painter2)
+  (rotate270 (beside (rotate90 painter1) (rotate90 painter2))))
+```
+
+---
+### Exercise 2.52
+
+Solution:
+
+- to add a smile to the `wave` painter, I appended this list to the defined list within `wave`'s definition:
+```scheme
+(define smile-segments
+  (list
+   (make-segment (make-vect 0.45 0.9) (make-vect 0.45 0.8))
+   (make-segment (make-vect 0.55 0.9) (make-vect 0.55 0.8))
+   (make-segment (make-vect 0.4 0.75) (make-vect 0.5 0.7))
+   (make-segment (make-vect 0.5 0.7) (make-vect 0.6 0.75))))
+```
+
+- changing `corner-split` to use one copy of the `up-split` and `right-split` images instead of two:
+```scheme
+(define (corner-split painter n)
+  (if (= n 0)
+      painter
+      (let ((up (up-split painter (- n 1)))
+            (right (right-split painter (- n 1)))
+            (corner (corner-split painter (- n 1))))
+        (beside (below painter up)
+                (below right corner)))))
+```

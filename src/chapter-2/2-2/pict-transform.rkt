@@ -1,13 +1,13 @@
 #lang racket
-(require "vector.rkt" "pict-frame.rkt")
+(require sicp-pict)
 
 (define (transform-painter painter origin corner1 corner2)
   (lambda (frame)
     (let ((m (frame-coord-map frame)))
       (let ((new-origin (m origin)))
         (painter (make-frame new-origin
-                             (sub-vect (m corner1) new-origin)
-                             (sub-vect (m corner2) new-origin)))))))
+                             (vector-sub (m corner1) new-origin)
+                             (vector-sub (m corner2) new-origin)))))))
 
 (define (flip-vert painter)
   (transform-painter 
@@ -70,3 +70,4 @@
         (paint-right frame)))))
 
 (define (below painter1 painter2)
+  (rotate270 (beside (rotate90 painter1) (rotate90 painter2))))
