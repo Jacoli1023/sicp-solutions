@@ -1,0 +1,18 @@
+#lang racket
+(require "alg-rep.rkt")
+(provide (all-defined-out))
+
+
+(define (deriv expr var)
+  (cond ((number? expr) 0)
+        ((variable? expr)
+         (if (same-variable? expr var) 1 0))
+        ((sum? expr)
+         (make-sum (deriv (addend expr) var)
+                   (deriv (augend expr) var)))
+        ((product? expr)
+         (make-sum (make-product (multiplier expr)
+                                 (deriv (multiplicand expr) var))
+                   (make-product (deriv (multiplier expr) var)
+                                 (multiplicand expr))))
+        (else (error 'deriv "unknown expr type" expr))))

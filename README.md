@@ -16,4 +16,5 @@ Without any further ado, let's begin!
 
 ### Chapter 2 - Building Abstractions with Data
 [2.1 - Introduction to Data Abstraction](./src/chapter-2/2-1)\
-[2.2 - Hierarchical Data and the Closure Property](./src/chapter-2/2-2)
+[2.2 - Hierarchical Data and the Closure Property](./src/chapter-2/2-2)\
+[2.3 - Symbolic Data](./src/chapter-2/2-3)
