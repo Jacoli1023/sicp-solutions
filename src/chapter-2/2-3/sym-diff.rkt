@@ -2,7 +2,6 @@
 (require "alg-rep.rkt")
 (provide (all-defined-out))
 
-
 (define (deriv expr var)
   (cond ((number? expr) 0)
         ((variable? expr)
@@ -15,4 +14,10 @@
                                  (deriv (multiplicand expr) var))
                    (make-product (deriv (multiplier expr) var)
                                  (multiplicand expr))))
+        ((exponentiation? expr)
+         (make-product 
+          (exponent expr)
+          (make-product (make-exponentiation (base expr)
+                                             (- (exponent expr) 1))
+                        (deriv (base expr) var))))
         (else (error 'deriv "unknown expr type" expr))))

@@ -24,6 +24,12 @@
               (* m1 m2))
         (else (list '* m1 m2))))
 
+(define (make-exponentiation b e)
+  (cond ((=number? e 0) 1)
+        ((=number? e 1) b)
+        ((=number? b 1) 1)
+        (else (list '** b e))))
+
 (define (sum? expr)
   (and (pair? expr) (eq? (car expr) '+)))
 (define (addend s) (cadr s))
@@ -33,3 +39,8 @@
   (and (pair? expr) (eq? (car expr) '*)))
 (define (multiplier s) (cadr s))
 (define (multiplicand s) (caddr s))
+
+(define (exponentiation? expr)
+  (and (pair? expr) (eq? (car expr) '**)))
+(define (base s) (cadr s))
+(define (exponent s) (caddr s))
