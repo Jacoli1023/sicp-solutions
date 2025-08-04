@@ -217,3 +217,105 @@ Test:
 > (deriv '(x + 3 * (x + y + 2)) 'x)
 4
 ```
+
+---
+### Exercise 2.59
+
+Solution ([`unordered-set.rkt`](./unordered-set.rkt)):
+```scheme
+(define (union-set set1 set2)
+  (cond ((null? set1) set2)
+        ((null? set2) set1)
+        ((element-of-set? (car set1) set2)
+         (union-set (cdr set1) set2))
+        (else (cons (car set1)
+                    (union-set (cdr set1) set2)))))
+```
+
+Test:
+```scheme
+> (union-set '(1 2 3 4) '(4 5 6))
+'(1 2 3 4 5 6)
+> (union-set '(1 2 3) '())
+'(1 2 3)
+> (union-set '() '(1 2 3))
+'(1 2 3)
+```
+
+---
+### Exercise 2.60
+
+Solution:
+
+Our procedures `element-of-set?` and `intersection-set` work the same whether the list allows duplicates or not; we only need to change `adjoin-set` and `union-set`, as these are the procedures which would normally handle duplicates.
+
+```scheme
+(define (adjoin-set x set)
+  (cons x set))
+
+(define (union-set set1 set2)
+  (append set1 set2))
+```
+
+As far as efficiency goes, `adjoin-set` runs in constant time ($\theta(1)$) now, since it always performs just a single operation. `union-set` will now run in $\theta(n)$ time instead of $\theta(n^2)$ time, since it simply appends each element of one set to the other, without checking if that element is already apart of the other set.
+
+`element-of-set?` and `intersection-set` still run in basically the same time, though with the possibility of duplicates, there is now a _duplicate scalar factor k_ introduced into the runtime. Thus `element-of-set?` will run in $\theta(kn)$ time, and `intersection-set` will run in $\theta(kn^2)$ time.
+
+As for which representation is more efficient, it depends on the duplicate factor, as well as the size of the set. If _k_ is a very high number, meaning there are potentially lots of duplicates, then it might be wiser to use the non-duplicate representation. Otherwise, the duplicate set representation would be more efficient, especially if you'll be using the `adjoin-set` and `union-set` procedures frequently.
+
+And of course, you'd always use the duplicate representation when it's required to do so, such as when measuring the frequency of certain outcomes, etc.
+
+---
+### Exercise 2.61
+
+Solution ([`ordered-set.rkt`](./ordered-set.rkt)):
+```scheme
+(define (adjoin-set x set)
+  (cond ((null? set) (list x))
+        ((= x (car set)) set)
+        ((> x (car set))
+         (cons (car set) (adjoin-set x (cdr set))))
+        (else (cons x set))))
+```
+
+Tests:
+```scheme
+> (adjoin-set 7 '(2 4 6 8 10))
+'(2 4 6 7 8 10)
+> (adjoin-set 1 '(2 3 4 5))
+'(1 2 3 4 5)
+> (adjoin-set 10 '(2 4 6 8))
+'(2 4 6 8 10)
+```
+
+---
+### Exercise 2.62
+
+Solution:
+```scheme
+(define (union-set set1 set2)
+  (cond ((null? set1) set2)
+        ((null? set2) set1)
+        (else
+         (let ((x1 (car set1))
+               (x2 (car set2)))
+           (cond ((= x1 x2)
+                  (cons x1 (union-set (cdr set1) (cdr set2))))
+                 ((< x1 x2)
+                  (cons x1 (union-set (cdr set1) set2)))
+                 (else
+                  (cons x2 (union-set set1 (cdr set2)))))))))
+```
+
+Tests:
+```scheme
+> (union-set '(1 2 3 4) '(3 4 5 6))
+'(1 2 3 4 5 6)
+> (union-set '() '(1 2 3))
+'(1 2 3)
+> (union-set '(1 2 3) '())
+'(1 2 3)
+```
+
+---
+
