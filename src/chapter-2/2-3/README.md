@@ -318,4 +318,141 @@ Tests:
 ```
 
 ---
+### Exercise 2.63
 
+```scheme
+(define (tree->list-1 tree)
+  (if (null? tree)
+      '()
+      (append (tree->list-1 (left-branch tree))
+              (cons (entry tree)
+                    (tree->list-1 (right-branch tree))))))
+
+(define (tree->list-2 tree)
+  (define (copy-to-list tree result-list)
+    (if (null? tree)
+        result-list
+        (copy-to-list (left-branch tree)
+                      (cons (entry tree)
+                            (copy-to-list (right-branch tree)
+                                          result-list)))))
+  (copy-to-list tree '()))
+```
+
+Solution:
+
+1. First, we'll go ahead and define the trees from figure 2.16, which represent the set {1, 3, 5, 7, 9, 11}. Excuse the data abstraction violation, but I don't want to write `make-tree` a thousand times over.
+
+```scheme
+(define t1 '(7 (3 (1 () ()) (5 () ())) (9 () (11 () ()))))
+(define t2 '(3 (1 () ()) (7 (5 () ()) (9 () (11 () ())))))
+(define t3 '(5 (3 (1 () ()) ()) (9 (7 () ()) (11 () ()))))
+```
+
+Now, to test out the procedures using these trees:
+```scheme
+> (tree->list-1 t1)
+'(1 3 5 7 9 11)
+> (tree->list-2 t1)
+'(1 3 5 7 9 11)
+> (tree->list-1 t2)
+'(1 3 5 7 9 11)
+> (tree->list-2 t2)
+'(1 3 5 7 9 11)
+> (tree->list-1 t3)
+'(1 3 5 7 9 11)
+> (tree->list-2 t3)
+'(1 3 5 7 9 11)
+```
+
+Yes, the two procedures produce the same result for every tree. The main difference is in the processes each procedure generates. The `tree->list-1` procedure produce a recursive process, while the `tree->list-2` procedure forms an iterative process.
+
+2. I'm not too familiar with order of growth rules quite yet, however, I can judge it based on the mechanisms each procedure uses to generate the list.
+
+Both procedures visit each node in the tree, however the first procedure uses `append` as its method for generating the list, whereas the second procedure uses `cons`. We're assuming the trees we used are balanced, thus `append` will be working with halved trees on every call (with `left-branch` and `right-branch` being the divided trees).
+
+Thus, the first procedure works in $\theta(n \log(n))$ steps, and the second procedure works in $\theta(n)$ steps. Specifically, the $\log(n)$ is the order of growth produced by the `append` procedure, and since `cons` works in constant time ($\theta(1)$), we implicitly multiply the second procedure's order of growth by 1. And since both procedures must visit every leaf in the tree, there is always going to be a linear growth factor to the tree (where the _n_ comes from in each order of growth).
+
+I'll learn how to explain order of growth better in the future...
+
+---
+### Exercise 2.64
+
+```scheme
+(define (list->tree elements)
+  (car (partial-tree elements (length elements))))
+
+(define (partial-tree elts n)
+  (if (= n 0)
+      (cons '() elts)
+      (let* ((left-size (quotient (- n 1) 2))
+             (left-result (partial-tree elts left-size))
+             (left-tree (car left-result))
+             (non-left-elts (cdr left-result))
+             (this-entry (car non-left-elts))
+             (right-size (- n (+ left-size 1)))
+             (right-result (partial-tree (cdr non-left-elts) right-size))
+             (right-tree (car right-result))
+             (remaining-elts (cdr right-result)))
+        (cons (make-tree this-entry left-tree right-tree)
+              remaining-elts))))
+```
+
+1. `partial-tree` works by recursively partitioning and dividing the list around a central element within the list. We call `partial-tree` when generating each sub-tree's left and right branches. The result returned by each call to this procedure is a list, where the first element in the list is the generated subtree (which will form the left branch of the tree), and the rest of the elements are those that have not been generated into a tree yet. The first element of those that have not been generated into a tree yet (that is the `this-entry` local variable), is the central entry point into the tree/subtrees. The recursive call then gets passed the rest of the elements within the list to form the right branch of the tree.
+
+The tree produced by the procedure when given the list `'(1 3 5 7 9 11)` looks like this:
+
+```
+'(5 (1 () (3 () ())) (9 (7 () ()) (11 () ())))
+
+           5
+          / \
+         /   \
+        1     9
+         \   / \
+          3 7   11
+```
+
+2. The procedure only visits each leaf in the tree once, and only uses operations that run in constant time (`cons`, `car`, `cdr`, `make-tree`, arithmetic, etc.). Thus the order of growth is $\theta(n)$.
+
+---
+### Exercise 2.65
+
+Solution:
+
+Excellent time to employ the DRY principle! We already have all the procedures we need to perform this. We can convert each tree into an ordered list (using `list->tree-2`), call `union-set` or `intersection-set` from [`ordered-set.rkt`](./ordered-set.rkt), and then convert the result of those procedures into a balanced binary tree using the `list->tree` procedure from before! All of these procedures run in linear time, thus our resulting procedure will also run in linear time.
+
+```scheme
+(define (union-tree tree1 tree2)
+  (list->tree (union-set (tree->list-2 tree1) (tree->list-2 tree2))))
+
+(define (intersection-tree tree1 tree2)
+  (list->tree (intersection-set (tree->list-2 tree1) (tree->list-2 tree2))))
+```
+
+For my tests, I'll be using the balanced binary trees formed from these respective lists:
+```scheme
+> (define l1 '(1 2 3 4 5))
+> (define l2 '(4 5 6 7 8))
+> (define t1 (list->tree l1))
+> (define t2 (list->tree l2))
+```
+
+I'll be converting each result back into an ordered list to make it easier to read and identify if I got the expected result or not.
+
+Tests:
+```scheme
+> (tree->list-2 (union-tree '() t1))
+'(1 2 3 4 5)
+> (tree->list-2 (union-tree t1 '()))
+'(1 2 3 4 5)
+> (tree->list-2 (union-tree t1 t2))
+'(1 2 3 4 5 6 7 8)
+
+> (tree->list-2 (intersection-tree '() t2))
+'()
+> (tree->list-2 (intersection-tree t2 '()))
+'()
+> (tree->list-2 (intersection-tree t1 t2))
+'(4 5)
+```
