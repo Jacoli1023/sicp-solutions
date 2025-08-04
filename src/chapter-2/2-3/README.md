@@ -456,3 +456,58 @@ Tests:
 > (tree->list-2 (intersection-tree t1 t2))
 '(4 5)
 ```
+
+---
+### Exercise 2.66
+
+Solution:
+
+Since the set of records is organized by a numerical set of keys, our `lookup` procedure will be very similar to the `element-of-set?` procedure in our [`tree-set.rkt`](./tree-set.rkt) module. The main difference simply being that we must now use a key selector, instead of directly comparing numerical values.
+
+```scheme
+(define (lookup given-key set-of-records)
+  (if (null? set-of-records)
+      false
+      (let* ((record (entry set-of-records))
+             (record-key (key record)))
+        (cond ((= given-key record-key) record)
+              ((< given-key record-key)
+               (lookup given-key (left-branch set-of-records)))
+              (else
+               (lookup given-key (right-branch set-of-records)))))))
+```
+
+For testing purposes, we'll create a scenario in which we're looking through a record of personnel files within a company. For simplicity's sake, each record will simply be the name of the employee as well as a numerical value representing the employee's ID (this will be our key). It will be in the form of: (<ID> <Name>). Thus, our `key` selector is just a simple `car`.
+
+```scheme
+> (define personnel '((2 Jacob) ((1 John) () ()) ((3 Jane) () ())))
+> (lookup 3 personnel)
+'(3 Jane)
+```
+
+---
+### Exercise 2.67
+
+```scheme
+(define sample-tree
+  (make-code-tree 
+   (make-leaf 'A 4)
+   (make-code-tree
+    (make-leaf 'B 2)
+    (make-code-tree 
+     (make-leaf 'D 1)
+     (make-leaf 'C 1)))))
+
+(define sample-message 
+  '(0 1 1 0 0 1 0 1 0 1 1 1 0))
+```
+
+Solution:
+
+```scheme
+> (decode sample-message sample-tree)
+'(A D A B B C A)
+```
+
+---
+### Exercise 2.68

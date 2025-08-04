@@ -68,3 +68,15 @@
 
 (define (intersection-tree tree1 tree2)
   (list->tree (intersection-set (tree->list-2 tree1) (tree->list-2 tree2))))
+
+(define key car)
+(define (lookup given-key set-of-records)
+  (if (null? set-of-records)
+      false
+      (let* ((record (entry set-of-records))
+             (record-key (key record)))
+        (cond ((= given-key record-key) record)
+              ((< given-key record-key)
+               (lookup given-key (left-branch set-of-records)))
+              (else
+               (lookup given-key (right-branch set-of-records)))))))
