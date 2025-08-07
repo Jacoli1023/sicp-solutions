@@ -511,3 +511,158 @@ Solution:
 
 ---
 ### Exercise 2.68
+
+```scheme
+(define (encode message tree)
+  (if (null? message)
+      '()
+      (append (encode-symbol (car message) tree)
+              (encode (cdr message) tree))))
+```
+
+Solution:
+```scheme
+(define (encode-symbol symbol tree)
+  (cond ((leaf? tree) '())
+        ((element-of-set? symbol (symbols (left-branch tree)))
+         (cons 0 (encode-symbol symbol (left-branch tree))))
+        ((element-of-set? symbol (symbols (right-branch tree)))
+         (cons 1 (encode-symbol symbol (right-branch tree))))
+        (else
+         (error "symbol not part of huffman tree: ENCODE-SYMBOL" symbol))))
+```
+
+Test:
+```scheme
+> (equal? (encode (decode sample-message sample-tree) sample-tree) 
+          sample-message)
+#t
+```
+
+---
+### Exercise 2.69
+
+```scheme
+(define (generate-huffman-tree pairs)
+  (successive-merge (make-leaf-set pairs)))
+```
+
+Solution:
+
+This one really was tricky, and part of the reason why I felt it was is because the book's demonstration on generating a huffman tree didn't simulate how our algorithm would work. They just gave an example of how _a_ huffman algorithm would work.
+
+However, once I retraced the steps of what it was each underlying procedure - specifically the fact that `make-leaf-set` orders our set of pairs in _increasing_ order, and that `adjoin-set` is designed to work with the weights of the elements and maintains its order - then I was able to promptly figure out what `successive-merge` needed to do.
+
+Indeed, all it needs to do is make a tree out of the first two elements (these are the smallest-weighted elements), adjoin this tree to the rest of the leaf-set, then recursively call itself with this new set. Keep doing that until there is only one element left in the set, which is the full huffman tree.
+
+```scheme
+(define (successive-merge leaf-set)
+  (if (null? (cdr leaf-set))
+      (car leaf-set)
+      (successive-merge
+       (adjoin-set (make-code-tree (car leaf-set) (cadr leaf-set))
+                   (cddr leaf-set)))))
+```
+
+Test:
+```scheme
+> (define pairs '((A 4) (B 2) (C 1) (D 1)))
+> (generate-huffman-tree pairs)
+'((leaf A 4)
+  ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4)
+  (A B D C)
+  8)
+```
+
+We can now create a sample-tree from a list of symbol-frequency pairs, and use that to encode new messages:
+```scheme
+> (define sample-tree (generate-huffman-tree '((A 4) (B 2) (C 1) (D 1))))
+> (encode-symbol 'A sample-tree)
+'(0)
+> (encode-symbol 'B sample-tree)
+'(1 0)
+> (encode-symbol 'C sample-tree)
+'(1 1 1)
+> (encode-symbol 'D sample-tree)
+'(1 1 0)
+> (encode '(A B A C A D A B A) sample-tree)
+'(0 1 0 0 1 1 1 0 1 1 0 0 1 0 0)
+```
+
+---
+### Exercise 2.70
+
+Solution:
+```scheme
+> (define rock-tree
+   (generate-huffman-tree
+    '((A 2) (BOOM 1) (GET 2) (JOB 2) (NA 16) (SHA 3) (YIP 9) (WAH 1))))
+> (define message
+   '(GET A JOB
+     SHA NA NA NA NA NA NA NA NA
+     GET A JOB
+     SHA NA NA NA NA NA NA NA NA
+     WAH YIP YIP YIP YIP
+     YIP YIP YIP YIP YIP
+     SHA BOOM))
+> (define encoded-message (encode message rock-tree))
+> (length encoded-message)
+84
+```
+
+If we use fixed-length codes with eight symbols, would require 3 bits per symbol ($log_2(8)$). We use 36 symbols in the message, thus we'd need to use $36 * 3$ or 108 bits to fully encode the song with these fixed-length codes.
+
+---
+### Exercise 2.71
+
+Solution:
+
+With the relative frequencies of each symbol being in increasing order of powers of 2, each tree will have its right branch be a leaf, and its left branch representing the rest of the elements in the set. Considering the following definitions of pair-frequency pairs and its associated tree:
+
+```scheme
+> (define pair5 '((A 1) (B 2) (C 4) (D 8) (E 16)))
+> (define tree5 (generate-huffman-tree pair5))
+```
+
+`tree5` would look like this:
+```
+      /\
+     /\ E
+    /\ D
+   /\ C
+  A  B
+```
+
+`pair10` and `tree10` would take these definitions:
+```scheme
+> (define pair10
+   (append pair5 '((F 32) (G 64) (H 128) (I 256) (J 512))))
+> (define tree10 (generate-huffman-tree pair10))
+```
+
+And it's tree would take this shape:
+```
+         /\
+        /\ J
+       /\ I
+      /\ H
+     /\ G
+    /\ F
+   /\ E
+  /\ D
+ /\ C
+A  B
+```
+
+In such trees, the most frequent symbol will always only require 1 bit to encode. The least frequent symbol will require _n - 1_ bits to encode.
+
+---
+### Exercise 2.72
+
+Solution:
+
+This is going on a hunch since I don't yet understand orders of growth very well, though I believe the order of growth for the encoding algorithm is $O(n^2)$. This is because at each level, we are scanning if the given symbol is within the list of symbols within the tree. This is a nested looping, using the `element-of-set?` procedure to traverse the `symbols` list.
+
+At every level, we are performing an $O(n)$ process of searching (linear search). Thus I believe this algorithm runs at $O(n^2)$ time.
+
+I will come back to this solution when I understand orders of growth a bit more.
