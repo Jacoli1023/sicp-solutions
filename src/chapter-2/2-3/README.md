@@ -551,7 +551,7 @@ Solution:
 
 This one really was tricky, and part of the reason why I felt it was is because the book's demonstration on generating a huffman tree didn't simulate how our algorithm would work. They just gave an example of how _a_ huffman algorithm would work.
 
-However, once I retraced the steps of what it was each underlying procedure - specifically the fact that `make-leaf-set` orders our set of pairs in _increasing_ order, and that `adjoin-set` is designed to work with the weights of the elements and maintains its order - then I was able to promptly figure out what `successive-merge` needed to do.
+However, once I retraced the steps of what it was each underlying procedure does - specifically the fact that `make-leaf-set` orders our set of pairs in _increasing_ order, and that `adjoin-set` is designed to work with the weights of the elements and maintains its order - then I was able to promptly figure out what `successive-merge` needed to do.
 
 Indeed, all it needs to do is make a tree out of the first two elements (these are the smallest-weighted elements), adjoin this tree to the rest of the leaf-set, then recursively call itself with this new set. Keep doing that until there is only one element left in the set, which is the full huffman tree.
 
