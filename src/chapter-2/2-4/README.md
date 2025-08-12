@@ -53,4 +53,26 @@ We cannot assimilate the predicates `number?` and `variable?` because those are 
   'done)
 ```
 
+Names like `install-product-package` are too long; they shall be shortened to names that are akin to `product-pkg`.
+
 3. The exponentiation package:
+```scheme
+(define (expt-pkg)
+  (define base car)
+  (define expt cadr)
+  (define (deriv-expt operands var)
+    (make-product
+     (expt operands)
+     (make-product (make-exponentiation (base operands)
+                                        (- (expt operands) 1))
+                   (deriv (base operands) var))))
+  (put 'deriv '** deriv-expt)
+  'done)
+```
+
+With this approach, not a single thing needed to be changed in the `deriv` procedure. In fact, to further make this even more data-directed, I should also include the constructors and selectors within the scope of the respective packages, and then `put` them into the data table. However, that is beyond what the exercise requires.
+
+4. This would just mean we'd also have to change the order for how we `put` our corresponding procedures into the data table. Otherwise, the interpreter would try to look for the type-tag, and all it would find are `\`deriv' symbols.
+
+---
+### Exercise 2.74

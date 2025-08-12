@@ -45,7 +45,7 @@
 (define (operands exp) (cdr exp))
 
 ; --- Operator-specific packages
-(define (install-sum-package)
+(define (sum-pkg)
   (define addend car)
   (define (augend sum)
     (accumulate make-sum 0 (cdr sum)))
@@ -55,7 +55,7 @@
   (put 'deriv '+ deriv-sum)
   'done)
 
-(define (install-product-package)
+(define (product-pkg)
   (define multiplier car)
   (define (multiplicand product)
     (accumulate make-product 1 (cdr product)))
@@ -65,4 +65,16 @@
               (make-product (deriv (multiplier operands) var)
                             (multiplicand operands))))
   (put 'deriv '* deriv-product)
+  'done)
+
+(define (expt-pkg)
+  (define base car)
+  (define expt cadr)
+  (define (deriv-expt operands var)
+    (make-product
+     (expt operands)
+     (make-product (make-exponentiation (base operands)
+                                        (- (expt operands) 1))
+                   (deriv (base operands) var))))
+  (put 'deriv '** deriv-expt)
   'done)
