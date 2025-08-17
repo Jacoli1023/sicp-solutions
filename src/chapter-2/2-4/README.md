@@ -72,7 +72,46 @@ Names like `install-product-package` are too long; they shall be shortened to na
 
 With this approach, not a single thing needed to be changed in the `deriv` procedure. In fact, to further make this even more data-directed, I should also include the constructors and selectors within the scope of the respective packages, and then `put` them into the data table. However, that is beyond what the exercise requires.
 
-4. This would just mean we'd also have to change the order for how we `put` our corresponding procedures into the data table. Otherwise, the interpreter would try to look for the type-tag, and all it would find are `\`deriv' symbols.
+4. This would just mean we'd also have to change the order for how we `put` our corresponding procedures into the data table. Otherwise, the interpreter would try to look for the type-tag, and all it would find are `'deriv` symbols.
 
 ---
 ### Exercise 2.74
+
+Solution ([`personnel-records.rkt`](./personnel-records.rkt)):
+
+1. `get-record` must receive a type tag specifying which division file to retrieve; thus, each division's personnel file should be tagged with their respective type: `'business`, `'operations`, etc. 
+
+Also, each division must incorporate their own `get-record` procedure that is able to navigate their file structure properly, and, of course, `put` this procedure into the procedure table.
+
+```scheme
+(define (get-record name file)
+  (let* ((division (type-tag file))
+        (record
+         (apply-generic 'get-record division name (contents file))))
+    (if record
+        (attach-tag division record)
+        #f)))
+```
+
+The ending conditional is dependent on how HQ wishes to integrate each division's records. Here, we are reattaching the division's type-tag to the record, which allows for easier passing of this record to other generic procedures. However, if we were not to follow the discipline described earlier in the chapter - that of "stripping off and attaching tags as data objects are passed from level to level" - then each division should also attach their type tag to every record file as well. This requires a lot more work, and violates the KISS principle anyway.
+
+2. Because we reattached the division's type tag to the record, as discussed in the previous part of the exercise, then no changes need to be made to the record files themselves. All the divisions need to do is to implement their own version of the `get-salary` procedure and `put` it in the data table.
+
+```scheme
+(define (get-salary record)
+  ((get 'get-salary (type-tag record)) (contents record)))
+```
+
+3. Our `get-record` procedure returns false if the record cannot be found, which makes the conditional easy to check:
+
+```scheme
+(define (find-employee-record name divisions)
+  (if (null? divisions)
+      #f
+      (or (get-record name (car divisions))
+          (find-employee-record name (cdr divisions)))))
+```
+
+4. This new company must tag their records file with a unique type-tag, and interface their procedures into the HQ's data table. Since we only generic procedures for `get-record` and `get-salary`, the installation process is rather simple.
+
+
