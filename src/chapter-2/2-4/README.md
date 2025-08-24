@@ -114,4 +114,41 @@ The ending conditional is dependent on how HQ wishes to integrate each division'
 
 4. This new company must tag their records file with a unique type-tag, and interface their procedures into the HQ's data table. Since we only generic procedures for `get-record` and `get-salary`, the installation process is rather simple.
 
+---
+### Exercise 2.75
 
+Solution:
+```scheme
+(define (make-from-mag-ang r a)
+  (define (dispatch op)
+    (cond ((eq? op 'real-part) (* r (cos a)))
+          ((eq? op 'imag-part) (* r (sin a)))
+          ((eq? op 'magnitude) r)
+          ((eq? op 'angle) a)
+          (else
+           (error "Unknown op: MAKE-FROM-MAG-ANG" op))))
+  dispatch)
+```
+
+Quick test:
+```scheme
+> ((make-from-mag-ang 12 1) 'magnitude)
+12
+> ((make-from-mag-ang 12 1) 'angle)
+1
+```
+
+---
+### Exercise 2.76
+
+Solution:
+
+1. For **generic operations with explicit dispatch**, when a new type is added to the system, every existing generic procedure must add a new clause to handle this new type. And if a new operation is added, this generic procedure must have clauses for every single type in the system. One must also be wary of writing procedures that could potentially have naming conflicts.
+
+2. For **data-directed style programming**, when a new type is added to the system, the author of the package needs to install its operations into the operation-type table. When a new operation is added to the system, implementations for that procedure must be installed for every type.
+
+3. For the **message-passing style**, when a new type is added to the system, you'd have to write a dispatch procedure that can handle all operations for the type. When a new operation is added, you'd have to add a new clause to the dispatch procedure for all the types.
+
+As far as which one to use and when, they all work rather well and can handle new types and operations being added to the system. However, if mostly adding new types to the system, it seems that message-passing is ideal; and when mostly adding new operations to the system, then generic operations with explicit dispatch works pretty well.
+
+Data-directed style programming is a good mixture of both. The only slight problem with it is the ambiguity of which operations and types are installed into the system. It's not quite easy to tell which procedure will be invoked when calling `apply-generic`.
