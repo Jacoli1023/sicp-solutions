@@ -41,6 +41,14 @@
        (lambda (x y) (tag (make-from-real-imag x y))))
   (put 'make-from-mag-ang 'complex
        (lambda (r a) (tag (make-from-mag-ang r a))))
+  (put 'equ? '(complex complex)
+       (lambda (z1 z2)
+         (and (= (real-part z1) (real-part z2))
+              (= (imag-part z1) (imag-part z2)))))
+  (put '=zero? '(complex)
+       (lambda (z)
+         (and (zero? (real-part z))
+              (zero? (imag-part z)))))
   'done)
 
 (define (complex-comp-pkg)
@@ -65,6 +73,8 @@
        (lambda (x y) (tag (/ x y))))
   (put 'make 'scheme-number
        (lambda (x) (tag x)))
+  (put 'equ? '(scheme-number scheme-number) =)
+  (put '=zero? '(scheme-number) zero?)
   'done)
 
 ;; --------------------------------------------------------------------
@@ -150,7 +160,14 @@
        (lambda (x y) (tag (div-rat x y))))
   (put 'make 'rational
        (lambda (n d) (tag (make-rat n d))))
+  (put 'equ? '(rational rational)
+       (lambda (x y)
+         (and (= (numer x) (numer y))
+              (= (denom x) (denom y)))))
+  (put '=zero? '(rational)
+       (lambda (x) (zero? (numer x))))
   'done)
+
 ;; --------------------------------------------------------------------
 ;; Generic procedures
 ;; --------------------------------------------------------------------
@@ -158,6 +175,8 @@
 (define (sub x y) (apply-generic 'sub x y))
 (define (mul x y) (apply-generic 'mul x y))
 (define (div x y) (apply-generic 'div x y))
+(define (equ? x y) (apply-generic 'equ? x y))
+(define (=zero? n) (apply-generic '=zero? n))
 
 (define (real-part z) (apply-generic 'real-part z))
 (define (imag-part z) (apply-generic 'imag-part z))
