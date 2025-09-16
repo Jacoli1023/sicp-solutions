@@ -18,4 +18,5 @@ Without any further ado, let's begin!
 [2.1 - Introduction to Data Abstraction](./src/chapter-2/2-1)\
 [2.2 - Hierarchical Data and the Closure Property](./src/chapter-2/2-2)\
 [2.3 - Symbolic Data](./src/chapter-2/2-3)\
-[2.4 - Multiple Representations for Abstract Data](./src/chapter-2/2-4)
+[2.4 - Multiple Representations for Abstract Data](./src/chapter-2/2-4)\
+[2.5 - Systems with Generic Operations](./src/chapter-2/2-5)
