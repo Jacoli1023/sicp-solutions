@@ -61,8 +61,14 @@
 ;; Scheme number package
 ;; --------------------------------------------------------------------
 (define (scheme-number-pkg)
+
+  ;; internal procedures
+  (define (scheme-number->rational n) (make-rational (contents n) 1))
+  (define (scheme-number->complex n) (make-complex-from-real-imag (contents n) 0))
   (define (tag x)
     (attach-tag 'scheme-number x))
+
+  ;; interface to system
   (put 'add '(scheme-number scheme-number)
        (lambda (x y) (tag (+ x y))))
   (put 'sub '(scheme-number scheme-number)
@@ -75,6 +81,9 @@
        (lambda (x) (tag x)))
   (put 'equ? '(scheme-number scheme-number) =)
   (put '=zero? '(scheme-number) zero?)
+
+  (put-coercion 'scheme-number 'rational scheme-number->rational)
+  (put-coercion 'scheme-number 'complex scheme-number->complex)
   'done)
 
 ;; --------------------------------------------------------------------
@@ -148,6 +157,11 @@
     (make-rat (* (numer x) (numer y)) (* (denom x) (denom y))))
   (define (div-rat x y)
     (make-rat (* (numer x) (denom y)) (* (denom x) (numer y))))
+  (define (rational->complex r)
+    (let ((untagged (contents r)))
+      (make-complex-from-real-imag (/ (numer untagged) (denom untagged))
+                                   0)))
+  
   ;; interface to rest of the system
   (define (tag x) (attach-tag 'rational x))
   (put 'add '(rational rational)
@@ -166,6 +180,7 @@
               (= (denom x) (denom y)))))
   (put '=zero? '(rational)
        (lambda (x) (zero? (numer x))))
+  (put-coercion 'rational 'complex rational->complex)
   'done)
 
 ;; --------------------------------------------------------------------
@@ -201,3 +216,11 @@
   (rectangular-pkg)
   (rational-pkg)
   (complex-pkg))
+
+;; --------------------------------------------------------------------
+;; For easier testing purposes
+;; --------------------------------------------------------------------
+(install-num-pkgs)
+(define sn (make-scheme-number 5))
+(define rn (make-rational 3 4))
+(define cn (make-complex-from-real-imag 1 2))

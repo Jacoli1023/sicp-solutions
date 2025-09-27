@@ -160,3 +160,108 @@ Tests:
 > (=zero? (make-complex-from-real-imag 0 1))
 #f
 ```
+
+---
+### Exercise 2.81
+
+```scheme
+(define (scheme-number->scheme-number n) n)
+(define (complex->complex z) z)
+
+(put-coercion 'scheme-number 'scheme-number
+              scheme-number->scheme-number)
+
+(put-coercion 'complex 'complex 
+              complex->complex)
+```
+
+Solution:\
+1. If `apply-generic` is called with two arguments of the same type to search for an operation that does not exist for those types, then infinite recursion will occur. It will keep trying to coerce one argument into the second over and over, resulting in an infinite loop.
+
+2. Louis is incorrect (as per usual, smh) that something had to be done, because `apply-generic` already returns an error after not finding the correct operation or failing to find a coercion for the given types.
+
+3. To prevent coercion from happening with two arguments of the same type, we simply need to have an equality check within the body of the `let` that checks if `type1` is equal to `type2`. If that is the case, our `apply-generic` procedure should return an error, since there is no operation to be found for those types:
+
+```scheme
+(define (apply-generic op . args)
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (define (err-sig)
+      (error "No method for these types" (list op type-tags)))
+    (if proc
+        (apply proc (map contents args))
+        (if (= (length args) 2)
+            (let ((type1 (car type-tags))
+                  (type2 (cadr type-tags)))
+              (if (eq? type1 type2) ; equality check here
+                  (err-sig)         ; signals an error if true
+                  (let ((a1 (car args))
+                        (a2 (cadr args))
+                        (t1->t2 (get-coercion type1 type2))
+                        (t2->t1 (get-coercion type2 type1)))
+                    (cond (t1->t2 (apply-generic op (t1->t2 a1) a2))
+                          (t2->t1 (apply-generic op a1 (t2->t1 a2)))
+                          (else (err-sig))))
+            (err-sig)))))
+```
+
+---
+### Exercise 2.82
+
+Solution:
+
+This one was a bit of a pain in the butt, and could definitely be rewritten to be more pretty, but it works and I'm not complaining.
+```scheme
+(define (apply-generic op . args)
+
+  (define (coercable? coerce-procs)
+    (not (member #f coerce-procs)))
+
+  (define (coerce-args coercion-procs args)
+    (map (lambda (coerce-proc arg)
+           (coerce-proc arg))
+         coercion-procs
+         args))
+
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (define (try-coercion tags)
+      (if (null? tags)
+          (error "No method for these types - APPLY-GENERIC" (list op type-tags))
+          (let* ((target-type (car tags))
+                 (arg-coercions (map (lambda (coerce-from)
+                                       (if (eq? coerce-from target-type)
+                                           identity
+                                           (get-coercion coerce-from target-type)))
+                                     type-tags)))
+            (if (coercable? arg-coercions)
+                (apply apply-generic
+                       op
+                       (coerce-args arg-coercions args))
+                (try-coercion (cdr tags))))))
+    (if proc
+        (apply proc (map contents args))
+        (try-coercion type-tags))))
+```
+
+Be sure to include the proper coercion procedures within each relevant arithmetic package. 
+
+Some tests:
+```scheme
+> (define sn (make-scheme-number 5))
+> (define rn (make-rational 3 4))
+> (define cn (make-complex-from-real-imag 1 2))
+
+> (apply-generic 'add sn sn)
+10
+> (apply-generic 'add sn rn)
+(rational 23 . 4)
+> (apply-generic 'add rn rn)
+(rational 3 . 2)
+> (apply-generic 'add rn sn)
+(rational 23 . 4)
+> (apply-generic 'add rn cn)
+(complex rectangular 1 3/4 . 2)
+> (apply-generic 'add sn cn)
+(complex rectangular 6 . 2)
+```

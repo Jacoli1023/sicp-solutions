@@ -35,6 +35,12 @@
 (define put (operation-table 'insert-proc!))
 (define reset (operation-table 'reset-proc!))
 
+; Simple coercion table, just define it in terms of `get` and `put`
+(define (get-coercion type1 type2)
+  (get 'coerce (list type1 type2)))
+(define (put-coercion type1 type2 coerce)
+  (put 'coerce (list type1 type2) coerce))
+
 (define (attach-tag type-tag contents)
   (if (eq? type-tag 'scheme-number)
     contents
@@ -48,12 +54,57 @@
         ((number? datum) datum)
         (else (error 'contents "bad tagged datum" datum))))
 
+; apply-generic now works with coercion types
+;; (define (apply-generic op . args)
+;;   (let* ((type-tags (map type-tag args))
+;;          (proc (get op type-tags)))
+;;     (define (err-sig)
+;;       (error "No method for these types" (list op type-tags)))
+;;     (if proc
+;;         (apply proc (map contents args))
+;;         (if (= (length args) 2)
+;;             (let* ((type1 (car type-tags))
+;;                    (type2 (cadr type-tags))
+;;                    (a1 (car args))
+;;                    (a2 (cadr args))
+;;                    (t1->t2 (get-coercion type1 type2))
+;;                    (t2->t1 (get-coercion type2 type1)))
+;;               (cond (t1->t2 (apply-generic op (t1->t2 a1) a2))
+;;                     (t2->t1 (apply-generic op a1 (t2->t1 a2)))
+;;                     (else (err-sig))))
+;;             (err-sig)))))
+
 (define (apply-generic op . args)
+
+  (define (coercable? coerce-procs)
+    (not (member #f coerce-procs)))
+
+  (define (coerce-args coercion-procs args)
+    (map (lambda (coerce-proc arg)
+           (coerce-proc arg))
+         coercion-procs
+         args))
+
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
+    (define (try-coercion tags)
+      (if (null? tags)
+          (error "No method for these types - APPLY-GENERIC" (list op type-tags))
+          (let* ((target-type (car tags))
+                 (arg-coercions (map (lambda (coerce-from)
+                                       (if (eq? coerce-from target-type)
+                                           identity
+                                           (get-coercion coerce-from target-type)))
+                                     type-tags)))
+            (if (coercable? arg-coercions)
+                (apply apply-generic
+                       op
+                       (coerce-args arg-coercions args))
+                (try-coercion (cdr tags))))))
     (if proc
         (apply proc (map contents args))
-        (error 'apply-generic "no method for argument types" op type-tags))))
+        (try-coercion type-tags))))
+
 
 (define (apply-specific op type . args)
   (let ((proc (get op type)))
