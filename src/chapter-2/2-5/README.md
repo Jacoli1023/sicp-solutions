@@ -265,3 +265,70 @@ Some tests:
 > (apply-generic 'add sn cn)
 (complex rectangular 6 . 2)
 ```
+
+---
+### Exercise 2.83
+
+Solution:
+
+The first step we must do in order to make our system follow the tower design is we must break up our scheme number package into two distinct packages: one for integers and one for real numbers.
+
+```scheme
+(define (integer-pkg)
+  (define (tag x) (attach-tag 'integer x))
+  (put 'add '(integer integer) (lambda (x y) (tag (+ x y))))
+  (put 'sub '(integer integer) (lambda (x y) (tag (- x y))))
+  (put 'mul '(integer integer) (lambda (x y) (tag (* x y))))
+  (put 'div '(integer integer) 
+       (lambda (x y)
+         (let ((z (/ x y)))
+           (if (integer? z) (tag z) (make-rational x y)))))
+  (put 'make 'integer tag)
+  'done)
+
+(define (real-pkg)
+  (define (tag x) (attach-tag 'real x))
+  (put 'add '(real real) (lambda (x y) (tag (+ x y))))
+  (put 'sub '(real real) (lambda (x y) (tag (- x y))))
+  (put 'mul '(real real) (lambda (x y) (tag (* x y))))
+  (put 'div '(real real) (lambda (x y) (tag (/ x y))))
+  (put 'make 'real tag)
+  'done)
+```
+
+Now then, to implement our raise procedures, we'll need to define a procedure that raise one numeric data type to the next within each corresponding package. Then, we put each raise procedure into the operation-lookup table, and create a generic `raise` procedure that applies the correct raise operation:
+
+```scheme
+(define (raise x) (apply-generic 'raise x)) ; generic raise procedure
+...
+; in the newly created integer package
+  (define (integer->rational n)
+    (make-rational n 1))
+  (put 'raise '(integer) integer->rational)
+...
+; in the rational package
+  (define (rational->real n)
+    (make-real (exact->inexact (/ (numer n) (denom n)))))
+  (put 'raise '(rational) rational->real)
+...
+; in the newly created real package
+  (define (real->complex n)
+    (make-complex-from-real-imag n 0))
+  (put 'raise '(real) real->complex)
+```
+
+Some tests:
+```scheme
+> (define int_n (make-integer 5))
+> (define rat_n (make-rational 3 4))
+> (define real_n (make-real 1.2))
+> (raise int_n)
+(rational 5 . 1)
+> (raise rat_n)
+(real . 0.75)
+> (raise real_n)
+(complex rectangular 1.2 . 0)
+```
+
+---
+### Exercise 2.84

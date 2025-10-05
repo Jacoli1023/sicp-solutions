@@ -7,6 +7,7 @@
 ;; --------------------------------------------------------------------
 ;; Complex number package
 ;; --------------------------------------------------------------------
+
 (define (complex-pkg)
   ;; imported procedures from rectangular and polar packages
   (define (make-from-real-imag x y)
@@ -60,6 +61,7 @@
 ;; --------------------------------------------------------------------
 ;; Scheme number package
 ;; --------------------------------------------------------------------
+
 (define (scheme-number-pkg)
 
   ;; internal procedures
@@ -86,9 +88,37 @@
   (put-coercion 'scheme-number 'complex scheme-number->complex)
   'done)
 
+(define (integer-pkg)
+  (define (tag x) (attach-tag 'integer x))
+  (define (integer->rational n)
+    (make-rational n 1))
+  (put 'add '(integer integer) (lambda (x y) (tag (+ x y))))
+  (put 'sub '(integer integer) (lambda (x y) (tag (- x y))))
+  (put 'mul '(integer integer) (lambda (x y) (tag (* x y))))
+  (put 'div '(integer integer) 
+       (lambda (x y)
+         (let ((z (/ x y)))
+           (if (integer? z) (tag z) (make-rational x y)))))
+  (put 'make 'integer tag)
+  (put 'raise '(integer) integer->rational)
+  'done)
+
+(define (real-pkg)
+  (define (real->complex n)
+    (make-complex-from-real-imag n 0))
+  (define (tag x) (attach-tag 'real x))
+  (put 'add '(real real) (lambda (x y) (tag (+ x y))))
+  (put 'sub '(real real) (lambda (x y) (tag (- x y))))
+  (put 'mul '(real real) (lambda (x y) (tag (* x y))))
+  (put 'div '(real real) (lambda (x y) (tag (/ x y))))
+  (put 'make 'real tag)
+  (put 'raise '(real) real->complex)
+  'done)
+
 ;; --------------------------------------------------------------------
 ;; Rectangular & Polar number packages
 ;; --------------------------------------------------------------------
+
 (define (rectangular-pkg)
   ;; Internal procedures
   (define real-part car)
@@ -140,6 +170,7 @@
 ;; --------------------------------------------------------------------
 ;; Rational number package
 ;; --------------------------------------------------------------------
+
 (define (rational-pkg)
   ;; internal procedures
   (define (numer x) (car x))
@@ -161,6 +192,8 @@
     (let ((untagged (contents r)))
       (make-complex-from-real-imag (/ (numer untagged) (denom untagged))
                                    0)))
+  (define (rational->real n)
+    (make-real (exact->inexact (/ (numer n) (denom n)))))
   
   ;; interface to rest of the system
   (define (tag x) (attach-tag 'rational x))
@@ -180,12 +213,14 @@
               (= (denom x) (denom y)))))
   (put '=zero? '(rational)
        (lambda (x) (zero? (numer x))))
+  (put 'raise '(rational) rational->real)
   (put-coercion 'rational 'complex rational->complex)
   'done)
 
 ;; --------------------------------------------------------------------
 ;; Generic procedures
 ;; --------------------------------------------------------------------
+
 (define (add x y) (apply-generic 'add x y))
 (define (sub x y) (apply-generic 'sub x y))
 (define (mul x y) (apply-generic 'mul x y))
@@ -200,6 +235,10 @@
 
 (define (make-scheme-number n)
   ((get 'make 'scheme-number) n))
+(define (make-integer n)
+  ((get 'make 'integer) n))
+(define (make-real n)
+  ((get 'make 'real) n))
 (define (make-rational n d)
   ((get 'make 'rational) n d))
 (define (make-complex-from-real-imag x y)
@@ -207,20 +246,25 @@
 (define (make-complex-from-mag-ang r a)
   ((get 'make-from-mag-ang 'complex) r a))
 
+(define (raise x)
+  (apply-generic 'raise x))
+
 ;; --------------------------------------------------------------------
 ;; EZ Package installation
 ;; --------------------------------------------------------------------
+
 (define (install-num-pkgs)
-  (scheme-number-pkg)
+  (integer-pkg)
+  (real-pkg)
+  (rational-pkg)
   (polar-pkg)
   (rectangular-pkg)
-  (rational-pkg)
   (complex-pkg))
 
 ;; --------------------------------------------------------------------
-;; For easier testing purposes
+;; Testing zone
 ;; --------------------------------------------------------------------
 (install-num-pkgs)
-(define sn (make-scheme-number 5))
-(define rn (make-rational 3 4))
-(define cn (make-complex-from-real-imag 1 2))
+(define int_n (make-integer 5))
+(define rat_n (make-rational 3 4))
+(define real_n (make-real 1.2))
