@@ -1,8 +1,108 @@
 #lang sicp
-(#%require "table-operations.rkt")
 (#%provide (all-defined))
 
+;; --------------------------------------------------------------------
+;; Table operations
+;; --------------------------------------------------------------------
+
+(define (make-table)
+  (let ((local-table (list '*table*)))
+    (define (lookup key-1 key-2)
+      (let ((subtable (assoc key-1 (cdr local-table))))
+        (if subtable
+            (let ((record (assoc key-2 (cdr subtable))))
+              (if record (cdr record) #f))
+            #f)))
+    (define (insert! key-1 key-2 value)
+      (let ((subtable (assoc key-1 (cdr local-table))))
+        (if subtable
+            (let ((record (assoc key-2 (cdr subtable))))
+              (if record
+                  (set-cdr! record value)
+                  (set-cdr! subtable
+                            (cons (cons key-2 value)
+                                  (cdr subtable)))))
+            (set-cdr! local-table
+                      (cons (list key-1 (cons key-2 value))
+                            (cdr local-table))))))
+    (define (reset!)
+      (set-cdr! local-table '()))
+    (define (dispatch m)
+      (cond ((eq? m 'lookup-proc) lookup)
+            ((eq? m 'insert-proc!) insert!)
+            ((eq? m 'reset-proc!) reset!)
+            (else (error 'make-table "unknown operation" m))))
+    dispatch))
+
+(define operation-table (make-table))
+(define get (operation-table 'lookup-proc))
+(define put (operation-table 'insert-proc!))
+(define reset (operation-table 'reset-proc!))
+
 (define (square x) (* x x))
+
+(define (attach-tag type-tag contents)
+  (if (eq? type-tag 'integer)
+    contents
+    (cons type-tag contents)))
+
+(define (type-tag datum)
+  (cond ((pair? datum) (car datum))
+        ((number? datum) 'integer)
+        (else (error 'type-tag "bad tagged datum" datum))))
+
+(define (contents datum)
+  (cond ((pair? datum) (cdr datum))
+        ((number? datum) datum)
+        (else (error 'contents "bad tagged datum" datum))))
+
+;; --------------------------------------------------------------------
+;; Apply-generic
+;; --------------------------------------------------------------------
+
+(define type-tower
+  '(integer rational real complex))
+
+(define (apply-generic op . args)
+
+  ; helper function to find the numeric level of the data type within
+  ; the given tower hierarchy
+  (define (find-type-level type)
+    (define (iter tower n)
+      (cond ((null? tower) #f)
+            ((eq? type (car tower)) n)
+            (else (iter (cdr tower) (+ n 1)))))
+    (iter type-tower 0))
+
+  ; finds the highest data type level in a given list of args
+  (define (find-highest-type-level)
+    (define (iter arg-list highest)
+      (if (null? arg-list)
+          highest
+          (let ((type-level (find-type-level (type-tag (car arg-list)))))
+            (if (> type-level highest)
+                (iter (cdr arg-list) type-level)
+                (iter (cdr arg-list) highest)))))
+    (iter args (find-type-level (type-tag (car args)))))
+
+  ; raises given argument to the target type-level in the hierarchy
+  (define (raise-to arg target-type-level)
+    (let ((type-level (find-type-level (type-tag arg))))
+      (cond ((= type-level target-type-level) arg)
+            ((< type-level target-type-level)
+             (raise-to (raise arg) target-type-level))
+            (else (error "Cannot raise argument to a lower type-level"
+                         arg target-type-level)))))
+
+  ; apply-generic
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (if proc
+        (apply proc (map contents args))
+        (let ((target-type-level (find-highest-type-level)))
+          (apply apply-generic op (map (lambda (arg)
+                                         (raise-to arg target-type-level))
+                                       args))))))
 
 ;; --------------------------------------------------------------------
 ;; Complex number package
@@ -84,8 +184,6 @@
   (put 'equ? '(scheme-number scheme-number) =)
   (put '=zero? '(scheme-number) zero?)
 
-  (put-coercion 'scheme-number 'rational scheme-number->rational)
-  (put-coercion 'scheme-number 'complex scheme-number->complex)
   'done)
 
 (define (integer-pkg)
@@ -214,7 +312,6 @@
   (put '=zero? '(rational)
        (lambda (x) (zero? (numer x))))
   (put 'raise '(rational) rational->real)
-  (put-coercion 'rational 'complex rational->complex)
   'done)
 
 ;; --------------------------------------------------------------------
@@ -265,6 +362,7 @@
 ;; Testing zone
 ;; --------------------------------------------------------------------
 (install-num-pkgs)
-(define int_n (make-integer 5))
-(define rat_n (make-rational 3 4))
-(define real_n (make-real 1.2))
+(define int_n (make-integer 1))
+(define rat_n (make-rational 2 3))
+(define real_n (make-real 5.6))
+(define complex_n (make-complex-from-real-imag 7 8))

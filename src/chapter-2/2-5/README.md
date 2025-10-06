@@ -332,3 +332,105 @@ Some tests:
 
 ---
 ### Exercise 2.84
+
+Solution:
+
+The first step to modifying the `apply-generic` procedure to use the new `raise` procedure is create a hierarchy structure for our data types. The simplest method for doing so is (of course) creating a list, and then `cdr`ing down to find the correct data type in the hierarchy.
+
+```solution
+(define type-tower
+  '(integer rational real complex))
+```
+
+Now for some helper functions that we'll need. For our `apply-generic` procedure to work with a data type hierarchy, we'll need to be able to find the type level of a given argument, find the highest type level present in an argument list, and be able to raise an argument's type to a specific type level. Here are the following helper procedures designed to give us this functionality:
+
+```scheme
+  ; helper function to find the numeric level of the data type within
+  ; the given tower hierarchy
+  (define (find-type-level type)
+    (define (iter tower n)
+      (cond ((null? tower) #f)
+            ((eq? type (car tower)) n)
+            (else (iter (cdr tower) (+ n 1)))))
+    (iter type-tower 0))
+
+  ; finds the highest data type level in a given list of args
+  (define (find-highest-type-level)
+    (define (iter arg-list highest)
+      (if (null? arg-list)
+          highest
+          (let ((type-level (find-type-level (type-tag (car arg-list)))))
+            (if (> type-level highest)
+                (iter (cdr arg-list) type-level)
+                (iter (cdr arg-list) highest)))))
+    (iter args (find-type-level (type-tag (car args)))))
+
+  ; raises given argument to the target type-level in the hierarchy
+  (define (raise-to arg target-type-level)
+    (let ((type-level (find-type-level (type-tag arg))))
+      (cond ((= type-level target-type-level) arg)
+            ((< type-level target-type-level)
+             (raise-to (raise arg) target-type-level))
+            (else (error "Cannot raise argument to a lower type-level"
+                         arg target-type-level)))))
+```
+
+Now to plug these into our `apply-generic` procedure. I'm using these as internal definitions, however it can be reasonable to define them outside of the `apply-generic` procedure as well, with a few modifications:
+
+```scheme
+(define (apply-generic op . args)
+
+  ; helper function to find the numeric level of the data type within
+  ; the given tower hierarchy
+  (define (find-type-level type)
+    (define (iter tower n)
+      (cond ((null? tower) #f)
+            ((eq? type (car tower)) n)
+            (else (iter (cdr tower) (+ n 1)))))
+    (iter type-tower 0))
+
+  ; finds the highest data type level in a given list of args
+  (define (find-highest-type-level)
+    (define (iter arg-list highest)
+      (if (null? arg-list)
+          highest
+          (let ((type-level (find-type-level (type-tag (car arg-list)))))
+            (if (> type-level highest)
+                (iter (cdr arg-list) type-level)
+                (iter (cdr arg-list) highest)))))
+    (iter args (find-type-level (type-tag (car args)))))
+
+  ; raises given argument to the target type-level in the hierarchy
+  (define (raise-to arg target-type-level)
+    (let ((type-level (find-type-level (type-tag arg))))
+      (cond ((= type-level target-type-level) arg)
+            ((< type-level target-type-level)
+             (raise-to (raise arg) target-type-level))
+            (else (error "Cannot raise argument to a lower type-level"
+                         arg target-type-level)))))
+
+  ; apply-generic
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (if proc
+        (apply proc (map contents args))
+        (let ((target-type-level (find-highest-type-level)))
+          (apply apply-generic op (map (lambda (arg)
+                                         (raise-to arg target-type-level))
+                                       args))))))
+```
+
+Now for a few tests:
+```scheme
+> (add int_n rat_n)
+(rational 5 . 3)
+> (add rat_n int_n)
+(rational 5 . 3)
+> (mul int_n (add rat_n real_n))
+(real . 6.266666666666667)
+> (add rat_n complex_n)
+(complex rectangular 7.666666666666667 . 8)
+```
+
+---
+### Exercise 2.85
