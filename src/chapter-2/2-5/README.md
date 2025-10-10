@@ -434,3 +434,99 @@ Now for a few tests:
 
 ---
 ### Exercise 2.85
+
+Solution:
+
+The first thing we must do in order to implement this method of simplifying our data objects is to, like how the exercise states, define the generic operation `project`. This means that within each data package we should define how to lower the data type into the type that's one level down in the hierarchy (basically the opposite of `raise`). We can also make use of some primitive procedures provided by the SICP/Scheme language to make our lives a little easier:
+
+```scheme
+; generic operator
+(define (project x)
+  (apply-generic 'project x))
+...
+...
+; in the complex package
+  (define (complex->real z)
+    (make-real (real-part z)))
+  (put 'project '(complex) complex->real)
+...
+...
+; in the real package
+  (define (real->rational x)
+    (let ((y (inexact->exact x)))
+      (make-rational (numerator y) (denominator y))))
+  (put 'project '(real) real->rational)
+...
+...
+; in the rational package
+  (define (rational->integer x)
+    (make-integer (quotient (numer x) (denom x))))
+  (put 'project '(rational) rational->integer)
+```
+
+Now then, as the exercise states, to see if we are able to perform the drop, we can project a data object and then raise it up again, then test if it is equivalent to the original data object's value. We can make use of our `equ?` procedures from before (while we're at it, make sure that `equ?` is implemented for our real and integer packages):
+
+```scheme
+(define (drop x)
+  (let ((type (type-tag x)))
+    (if (= (find-type-level type) 0)
+        x
+        (let* ((projected (project x))
+               (raised (raise projected)))
+          (if (equ? x raised)
+              (drop projected)
+              x)))))
+```
+
+Let's go ahead and test these out before implementing them in our `apply-generic` procedure:
+
+```scheme
+> (project (raise (raise int_n)))
+(rational 1 . 1)
+> (project (project (raise (raise int_n))))
+1
+> (drop (raise int_n))
+1
+> (drop (raise (raise int_n)))
+1
+> (drop (raise (raise (raise int_n))))
+1
+```
+
+As we can see, no matter what level our data object is in the type hierarchy, `drop` and `project` work as intended.
+
+Now then, in order to implement this new `drop` procedure into our `apply-generic` procedure, we first must establish the rules for _when_ it makes sense to try to drop the result. Otherwise, we may run into trouble if we try dropping the result of certain generic procedures (such as our predicate `equ?` procedure that is used in `drop` itself). The only such times we really care about dropping the result is when arithmetic is involved. So then, we can implement a predicate procedure that checks if the given generic operation is one of `add`, `sub`, `mul`, or `div`, and if it is, we can attempt to drop the result of our generic `apply` procedure:
+
+```scheme
+; helper procedure for identifying when to drop the result
+  (define (reduce x)
+    (cond ((eq? op 'add) (drop x))
+          ((eq? op 'sub) (drop x))
+          ((eq? op 'mul) (drop x))
+          ((eq? op 'div) (drop x))
+          (else x)))
+...
+...
+; drop result returned from our generic apply
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (if proc
+        (reduce (apply proc (map contents args)))
+        (let ((target-type-level (find-highest-type-level)))
+          (apply apply-generic op (map (lambda (arg)
+                                         (raise-to arg target-type-level))
+                                       args))))))
+```
+
+And for some final tests:
+
+```scheme
+> (drop (make-complex-from-real-imag 4 0))
+4
+> (add (make-complex-from-real-imag 4 0) (make-integer 8))
+12
+> (sub (make-real 3.5) (make-real 1.5))
+2
+> (div (make-rational 3 2) (make-integer 9))
+(rational 1 . 6)
+```

@@ -63,16 +63,23 @@
 (define type-tower
   '(integer rational real complex))
 
+; helper function to find the numeric level of the data type within
+; the given tower hierarchy
+(define (find-type-level type)
+  (define (iter tower n)
+    (cond ((null? tower) #f)
+          ((eq? type (car tower)) n)
+          (else (iter (cdr tower) (+ n 1)))))
+  (iter type-tower 0))
+
 (define (apply-generic op . args)
 
-  ; helper function to find the numeric level of the data type within
-  ; the given tower hierarchy
-  (define (find-type-level type)
-    (define (iter tower n)
-      (cond ((null? tower) #f)
-            ((eq? type (car tower)) n)
-            (else (iter (cdr tower) (+ n 1)))))
-    (iter type-tower 0))
+  (define (reduce x)
+    (cond ((eq? op 'add) (drop x))
+          ((eq? op 'sub) (drop x))
+          ((eq? op 'mul) (drop x))
+          ((eq? op 'div) (drop x))
+          (else x)))
 
   ; finds the highest data type level in a given list of args
   (define (find-highest-type-level)
@@ -98,7 +105,7 @@
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
     (if proc
-        (apply proc (map contents args))
+        (reduce (apply proc (map contents args)))
         (let ((target-type-level (find-highest-type-level)))
           (apply apply-generic op (map (lambda (arg)
                                          (raise-to arg target-type-level))
@@ -129,6 +136,8 @@
                        (- (angle z1) (angle z2))))
   ;; interface to rest of the system
   (define (tag z) (attach-tag 'complex z))
+  (define (complex->real z)
+    (make-real (real-part z)))
   (complex-comp-pkg)
   (put 'add '(complex complex)
        (lambda (z1 z2) (tag (add-complex z1 z2))))
@@ -150,6 +159,7 @@
        (lambda (z)
          (and (zero? (real-part z))
               (zero? (imag-part z)))))
+  (put 'project '(complex) complex->real)
   'done)
 
 (define (complex-comp-pkg)
@@ -183,7 +193,6 @@
        (lambda (x) (tag x)))
   (put 'equ? '(scheme-number scheme-number) =)
   (put '=zero? '(scheme-number) zero?)
-
   'done)
 
 (define (integer-pkg)
@@ -197,6 +206,7 @@
        (lambda (x y)
          (let ((z (/ x y)))
            (if (integer? z) (tag z) (make-rational x y)))))
+  (put 'equ? '(integer integer) =)
   (put 'make 'integer tag)
   (put 'raise '(integer) integer->rational)
   'done)
@@ -204,13 +214,18 @@
 (define (real-pkg)
   (define (real->complex n)
     (make-complex-from-real-imag n 0))
+  (define (real->rational x)
+    (let ((y (inexact->exact x)))
+      (make-rational (numerator y) (denominator y))))
   (define (tag x) (attach-tag 'real x))
   (put 'add '(real real) (lambda (x y) (tag (+ x y))))
   (put 'sub '(real real) (lambda (x y) (tag (- x y))))
   (put 'mul '(real real) (lambda (x y) (tag (* x y))))
   (put 'div '(real real) (lambda (x y) (tag (/ x y))))
+  (put 'equ? '(real real) =)
   (put 'make 'real tag)
   (put 'raise '(real) real->complex)
+  (put 'project '(real) real->rational)
   'done)
 
 ;; --------------------------------------------------------------------
@@ -292,6 +307,8 @@
                                    0)))
   (define (rational->real n)
     (make-real (exact->inexact (/ (numer n) (denom n)))))
+  (define (rational->integer x)
+    (make-integer (quotient (numer x) (denom x))))
   
   ;; interface to rest of the system
   (define (tag x) (attach-tag 'rational x))
@@ -312,6 +329,7 @@
   (put '=zero? '(rational)
        (lambda (x) (zero? (numer x))))
   (put 'raise '(rational) rational->real)
+  (put 'project '(rational) rational->integer)
   'done)
 
 ;; --------------------------------------------------------------------
@@ -345,6 +363,18 @@
 
 (define (raise x)
   (apply-generic 'raise x))
+(define (project x)
+  (apply-generic 'project x))
+
+(define (drop x)
+  (let ((type (type-tag x)))
+    (if (= (find-type-level type) 0)
+        x
+        (let* ((projected (project x))
+               (raised (raise projected)))
+          (if (equ? x raised)
+              (drop projected)
+              x)))))
 
 ;; --------------------------------------------------------------------
 ;; EZ Package installation
