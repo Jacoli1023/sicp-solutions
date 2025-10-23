@@ -530,3 +530,165 @@ And for some final tests:
 > (div (make-rational 3 2) (make-integer 9))
 (rational 1 . 6)
 ```
+
+---
+### Exercise 2.86
+
+Solution:
+
+In order for our complex numbers to work with our own user-defined data types, we must generalize the procedures within the complex number package. Those such as `add-complex` and `mul-complex` must now use our generic procedures `add` and `mul` instead of Scheme's `+` and `*`, respectively.
+
+```scheme
+; internal definitions of the complex number package
+  (define (add-complex z1 z2)
+    (make-from-real-imag (add (real-part z1) (real-part z2))
+                         (add (imag-part z1) (imag-part z2))))
+  (define (sub-complex z1 z2)
+    (make-from-real-imag (sub (real-part z1) (real-part z2))
+                         (sub (imag-part z1) (imag-part z2))))
+  (define (mul-complex z1 z2)
+    (make-from-mag-ang (mul (magnitude z1) (magnitude z2))
+                       (add (angle z1) (angle z2))))
+  (define (div-complex z1 z2)
+    (make-from-mag-ang (div (magnitude z1) (magnitude z2))
+                       (sub (angle z1) (angle z2))))
+```
+
+We now also need to ensure the procedures within the polar and rectangular sub-packages are using generic arithmetic procedures. This means, as the problem statement suggests, we must create generic procedures for the square root, sine, cosine, and inverse tangent functions. We'll go ahead and implement these into our respective number packages:
+
+```scheme
+; integer package
+  (put 'square-root '(integer) (lambda (x) (make-real (sqrt x))))
+  (put 'sine' (integer) (lambda (x) (make-real (sin x))))
+  (put 'cosine '(integer) (lambda (x) (make-real (cos x))))
+  (put 'arctan '(integer integer) (lambda (x y) (make-real (atan x y))))
+...
+...
+; rational package
+  (define (ratio x) (/ (numer x) (denom x)))
+  (put 'square-root '(rational) (lambda (x) (make-real (sqrt (ratio x)))))
+  (put 'sine '(rational) (lambda (x) (make-real (sin (ratio x)))))
+  (put 'cosine '(rational) (lambda (x) (make-real (cos (ratio x)))))
+  (put 'arctan '(rational) 
+       (lambda (y x) (make-real (atan (ratio y) (ratio x)))))
+...
+...
+; real package
+  (put 'square-root '(real) (lambda (x) (tag (sqrt x))))
+  (put 'sine '(real) (lambda (x) (tag (sin x))))
+  (put 'cosine '(real) (lambda (x) (tag (cos x))))
+  (put 'arctan '(real real) (lambda (y x) (tag (atan y x))))
+...
+...
+; generic procedures
+(define (square x) (mul x x))
+(define (square-root x) (apply-generic 'square-root x))
+(define (sine x) (apply-generic 'sine x))
+(define (cosine x) (apply-generic 'cosine x))
+(define (arctan x y) (apply-generic 'arctan x y))
+```
+
+With these defined and implemented, we can now rewrite the procedures in the rectangular and polar complex number packages:
+
+```scheme
+(define (rectangular-pkg)
+  ;; Internal procedures
+  (define real-part car)
+  (define imag-part cdr)
+  (define make-from-real-imag cons)
+  (define (magnitude z)
+    (square-root (add (square (real-part z))
+                      (square (imag-part z)))))
+  (define (angle z)
+    (arctan (imag-part z) (real-part z)))
+  (define (make-from-mag-ang r a)
+    (cons (mul r (cosine a)) (mul r (sine a))))
+
+  ;; Interface to the rest of the system
+  (define (tag x) (attach-tag 'rectangular x))
+  (put 'real-part '(rectangular) real-part)
+  (put 'imag-part '(rectangular) imag-part)
+  (put 'magnitude '(rectangular) magnitude)
+  (put 'angle '(rectangular) angle)
+  (put 'make-from-real-imag 'rectangular
+       (lambda (x y) (tag (make-from-real-imag x y))))
+  (put 'make-from-mag-ang 'rectangular
+       (lambda (r a) (tag (make-from-mag-ang r a)))))
+
+(define (polar-pkg)
+  ;; Internal procedures
+  (define magnitude car)
+  (define angle cdr)
+  (define make-from-mag-ang cons)
+  (define (real-part z)
+    (mul (magnitude z) (cosine (angle z))))
+  (define (imag-part z)
+    (mul (magnitude z) (sine (angle z))))
+  (define (make-from-real-imag x y)
+    (cons (square-root (add (square x) (square y)))
+          (arctan y x)))
+
+  ;; Interface to the rest of the system
+  (define (tag x) (attach-tag 'polar x))
+  (put 'real-part '(polar) real-part)
+  (put 'imag-part '(polar) imag-part)
+  (put 'magnitude '(polar) magnitude)
+  (put 'angle '(polar) angle)
+  (put 'make-from-real-imag 'polar
+       (lambda (x y) (tag (make-from-real-imag x y))))
+  (put 'make-from-mag-ang 'polar
+       (lambda (r a) (tag (make-from-mag-ang r a)))))
+```
+
+Now then, we just need to fix a few more operations now that the components of the complex numbers could be different types, such as `equ?`. Now that our complex number's real part and imaginary part could be different data types, we'd need to be able to call `equ?` on the components themselves.
+
+We'll also need to update the list of possible reduceable operations in our `apply-generic` procedure, in order to include our new set of trigonomic functions:
+
+```scheme
+; within the complex number package, equ?
+  (put 'equ? '(complex complex)
+       (lambda (z1 z2)
+         (and (equ? (real-part z1) (real-part z2))
+              (equ? (imag-part z1) (imag-part z2)))))
+...
+...
+; within our apply-generic procedure
+  (define (reduce x)
+    (cond ((eq? op 'add) (drop x))
+          ((eq? op 'sub) (drop x))
+          ((eq? op 'mul) (drop x))
+          ((eq? op 'div) (drop x))
+          ((eq? op 'square-root) (drop x))
+          ((eq? op 'sine) (drop x))
+          ((eq? op 'cosine) (drop x))
+          ((eq? op 'arctan) (drop x))
+          (else x)))
+```
+
+Now for a few tests, using the following numbers:
+
+```scheme
+(define int_n (make-integer 1))
+(define rat_n (make-rational 2 3))
+(define real_n (make-real 5.6))
+
+(define z1 (make-complex-from-real-imag rat_n int_n))
+(define z2 (make-complex-from-mag-ang real_n rat_n))
+```
+
+```scheme
+> (equ? z1 z1)
+#t
+> (equ? z1 z2)
+#f
+> (add z1 z2)
+(complex
+ rectangular
+ (rational 4279237606951109 . 844424930131968)
+ rational
+ 157023310231171
+ .
+ 35184372088832)
+```
+
+This set of exercises was rather difficult, and it looks like some generic procedures do not work anymore after making these changes. I do not believe that my `apply-generic`, `raise` and `projection` methods are the cleanest nor smoothest, yet these things have gotten quite entangled that it's a little hard to debug. I think my problem stems from me constantly modifying and altering the base arithmetic packages themselves, instead of creating new packages to add/install on top when the exercise problem asks for it. This is a better example of modularity and data additivity that the section was preaching for. At some point I would like to redo this section but with better programming principles so that these changes I implement do not break the previous set of packages.
