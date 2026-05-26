@@ -1,13 +1,31 @@
 # [2.5 Systems with Generic Operations](https://sarabander.github.io/sicp/html/2_002e5.xhtml#g_t2_002e5)
 
 ---
-### Short disclaimer!
+### Disclaimer
 
-This chapter requires the use of mutable pairs, which the Racket language does not handle too well. Since our operator tables rely on the use of procedures such as `set-car!` and `set-cdr!`, I needed to create a module using the sicp (a subset of the Scheme language) language, which still supports mutable pairs.
+Coming back to this section, I've realized a few mistakes I've made or inadequacies I've produced that do not really follow the idea of data-additivity that the book is trying to produce. Previously, I was incorporating every new piece of functionality directly into the corresponding arithmetic packages, creating _fat objects_. While this made things seem more cohesive, it actually violated the modular principles that SICP was striving to instill in me.
 
-The Racket command line interpreter also does not play very well with the SICP language (automatically turns `cons` to `mcons`, which makes it hard to dispatch on type), so I've also started using the Dr. Racket IDE for these solutions. The rest of this chapter - and possibly future ones - will be written in the SICP language or in Scheme, and will be run through Dr. Racket.
+Instead, I should be aiming for something more similar to _protocols_ or _type classes_ (like Haskell's type classes or Rust's traits) that define behavior externally. I will thus begin vastly reworking this section, which may produce some irregular-looking files. Either way, this is my learning journey so deal with it.
 
-This chapter will rely heavily on these two files: [`table-operations.rkt`](./table-operations.rkt) and [`arithmetic-pkg.rkt`](./arithmetic-pkg.rkt). As I update this section, they will probably go through lots of changes.
+My planned file structure will now look like this:
+```
+2-5/
+  table.rkt          ← make-table, get, put, operation-table (shared state)
+  tags.rkt           ← attach-tag, type-tag, contents
+  apply-generic.rkt  ← apply-generic, type-tower, raise, drop, find-type-level
+  generics.rkt       ← add, sub, mul, div, equ?, raise, drop, square-root, etc.
+  pkg-integer.rkt    ← integer package only
+  pkg-rational.rkt   ← rational package only
+  pkg-real.rkt       ← real package only
+  pkg-rectangular.rkt
+  pkg-polar.rkt
+  pkg-complex.rkt    ← requires rectangular + polar
+  install.rkt        ← (require) all packages, calls install functions, runs tests
+```
+
+This module structure will help me maintain the abstraction barriers that the book recommends, with each arithmetic package living in its own file as a module, and then generic arithmetic that operate on these data types also being implemented and stored within their own modules. This is made easy to perform with Dr. Racket's module functionality.
+
+I will begin implementing these files as the exercises requires them. Here are the attached links: [table.rkt](./table.rkt), [tags.rkt](./tags.rkt), [apply-generic.rkt](./apply-generic.rkt), generics.rkt, pkg-integer.rkt, pkg-rational.rkt, pkg-real.rkt, pkg-rectangular.rkt, pkg-polar.rkt, pkg-complex.rkt, install.rkt. I will also rework any exercises that need to be following these changes.
 
 ---
 ### Exercise 2.77
