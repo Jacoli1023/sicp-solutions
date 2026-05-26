@@ -25,7 +25,7 @@ My planned file structure will now look like this:
 
 This module structure will help me maintain the abstraction barriers that the book recommends, with each arithmetic package living in its own file as a module, and then generic arithmetic that operate on these data types also being implemented and stored within their own modules. This is made easy to perform with Dr. Racket's module functionality.
 
-I will begin implementing these files as the exercises requires them. Here are the attached links: [table.rkt](./table.rkt), [tags.rkt](./tags.rkt), [apply-generic.rkt](./apply-generic.rkt), generics.rkt, pkg-integer.rkt, pkg-rational.rkt, pkg-real.rkt, pkg-rectangular.rkt, pkg-polar.rkt, pkg-complex.rkt, install.rkt. I will also rework any exercises that need to be following these changes.
+I will begin implementing these files as the exercises requires them. Here are the attached links: [table.rkt](./table.rkt), [tags.rkt](./tags.rkt), [apply-generic.rkt](./apply-generic.rkt), [generics.rkt](./generics.rkt), [pkg-integer.rkt](./pkg-integer.rkt), [pkg-rational.rkt](./pkg-rational.rkt), [pkg-real.rkt](./pkg-real.rkt), [pkg-rectangular.rkt](./pkg-rectangular.rkt), [pkg-polar.rkt](./pkg-polar.rkt), [pkg-complex.rkt](./pkg-complex.rkt), [install.rkt](./install.rkt). I will also rework any exercises that need to be following these changes.
 
 ---
 ### Exercise 2.77
