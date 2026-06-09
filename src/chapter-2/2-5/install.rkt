@@ -1,5 +1,6 @@
 #lang sicp
-(#%require "apply-generic.rkt" "generics.rkt"  "pkg-complex.rkt" "pkg-integer.rkt" "pkg-polar.rkt" "pkg-rational.rkt" "pkg-rectangular.rkt" "table.rkt" "tags.rkt")
+(#%require "tags.rkt" "table.rkt" "generics.rkt" "apply-generic.rkt" "pkg-integer.rkt" "pkg-rational.rkt" "pkg-polar.rkt" "pkg-rectangular.rkt" "pkg-complex.rkt")
+(#%provide (all-defined))
 
 ; procedure helps us load packages with a clean slate
 (define (using . installers)

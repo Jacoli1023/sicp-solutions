@@ -37,6 +37,12 @@
        (lambda (x y) (tag (mul-rat x y))))
   (put 'div '(rational rational)
        (lambda (x y) (tag (div-rat x y))))
+  (put 'equ? '(rational rational)
+       (lambda (x y)
+         (and (= (numer x) (numer y))
+              (= (denom x) (denom y)))))
+  (put '=zero? '(rational)
+       (lambda (x) (zero? (numer x))))
   (put 'make 'rational
        (lambda (n d) (tag (make-rat n d))))
   'done)
