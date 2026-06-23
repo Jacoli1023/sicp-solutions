@@ -43,3 +43,13 @@
 (=zero? (make-complex-from-real-imag 0 0)) ; EO: #t
 (=zero? (make-complex-from-real-imag 0 1)) ; EO: #f
 (newline)
+
+;; 2.83, raise climbs one rung of the tower
+(display "EX 2.83")
+(newline)
+(raise (make-integer 5))      ; EO: (rational 5 . 1)
+(raise (make-rational 3 4))   ; EO: (real . 0.75)
+(raise (make-real 1.2))       ; EO: (complex rectangular 1.2 . 0)
+(raise (raise (make-integer 5)))           ; EO: (real . 5.0)
+(raise (raise (raise (make-integer 5))))   ; EO: (complex rectangular 5.0 . 0)
+(newline)

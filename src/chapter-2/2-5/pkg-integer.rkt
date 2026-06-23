@@ -3,25 +3,19 @@
 (#%provide (all-defined))
 
 ;; --------------------------------------------------------------------
-;; Scheme-number package from 2.5
+;; Integer package - bottom of the numeric tower
 ;; --------------------------------------------------------------------
 
-(define (install-scheme-number-package)
-  (define (tag x)
-    (attach-tag 'scheme-number x))
-  (put 'add '(scheme-number scheme-number)
-       (lambda (x y) (tag (+ x y))))
-  (put 'sub '(scheme-number scheme-number)
-       (lambda (x y) (tag (- x y))))
-  (put 'mul '(scheme-number scheme-number)
-       (lambda (x y) (tag (* x y))))
-  (put 'div '(scheme-number scheme-number)
-       (lambda (x y) (tag (/ x y))))
-  (put 'make 'scheme-number
-       (lambda (x) (tag x)))
-  (put 'equ? '(scheme-number scheme-number) =)
-  (put '=zero? '(scheme-number) zero?)
+(define (install-integer-package)
+  (define (tag x) (attach-tag 'integer x))
+  (put 'add '(integer integer) (lambda (x y) (tag (+ x y))))
+  (put 'sub '(integer integer) (lambda (x y) (tag (- x y))))
+  (put 'mul '(integer integer) (lambda (x y) (tag (* x y))))
+  (put 'div '(integer integer) (lambda (x y) (tag (quotient x y))))
+  (put 'equ?   '(integer integer) =)
+  (put '=zero? '(integer) zero?)
+  (put 'make 'integer tag)
   'done)
 
-(define (make-scheme-number n)
-  ((get 'make 'scheme-number) n))
+(define (make-integer n)
+  ((get 'make 'integer) n))

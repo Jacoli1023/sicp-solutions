@@ -311,63 +311,70 @@ Suppose the table holds a directly-installed mixed-type operation, say `(op rati
 
 Solution:
 
-The first step we must do in order to make our system follow the tower design is we must break up our scheme number package into two distinct packages: one for integers and one for real numbers.
+The exercise asks for a tower of types — `integer -> rational -> real -> complex` — and a generic `raise` that climbs one rung. Following the same modular spirit as 2.82, I want the tower to be a *property of the system*, not something each numeric package carries around. Concretely that means three structural moves:
+
+1. The existing `pkg-integer.rkt` was actually holding the scheme-number package (misnamed from earlier). I lifted that content into a new [`pkg-scheme-number.rkt`](./pkg-scheme-number.rkt) so it stays available unchanged, and let `pkg-integer.rkt` become the actual integer-tagged package. The two now coexist: bare numbers continue to default to `'scheme-number` (so `(add 1 2)` keeps working as before), and `(make-integer 5)` enters the tower explicitly.
+2. Added a new [`pkg-real.rkt`](./pkg-real.rkt) for `'real`.
+3. The `raise` procedures themselves live in a new [`raises.rkt`](./raises.rkt) module, parallel to how `coercions.rkt` is organized. None of `pkg-integer.rkt` / `pkg-rational.rkt` / `pkg-real.rkt` know anything about the rung above them.
+
+#### Integer and real packages
 
 ```scheme
-(define (integer-pkg)
+(define (install-integer-package)
   (define (tag x) (attach-tag 'integer x))
   (put 'add '(integer integer) (lambda (x y) (tag (+ x y))))
   (put 'sub '(integer integer) (lambda (x y) (tag (- x y))))
   (put 'mul '(integer integer) (lambda (x y) (tag (* x y))))
-  (put 'div '(integer integer) 
-       (lambda (x y)
-         (let ((z (/ x y)))
-           (if (integer? z) (tag z) (make-rational x y)))))
+  (put 'div '(integer integer) (lambda (x y) (tag (quotient x y))))
+  (put 'equ?   '(integer integer) =)
+  (put '=zero? '(integer) zero?)
   (put 'make 'integer tag)
   'done)
+```
 
-(define (real-pkg)
-  (define (tag x) (attach-tag 'real x))
-  (put 'add '(real real) (lambda (x y) (tag (+ x y))))
-  (put 'sub '(real real) (lambda (x y) (tag (- x y))))
-  (put 'mul '(real real) (lambda (x y) (tag (* x y))))
-  (put 'div '(real real) (lambda (x y) (tag (/ x y))))
-  (put 'make 'real tag)
+Notice that `div` uses `quotient`, not `(/ ...)` with a fallback to `make-rational` as my earlier draft had. Conflating "divide two integers" with "promote the result up the tower" couples the integer package to the rational package; if a caller wants a fractional result, they should `raise` first. The real package mirrors this shape with `'real` tags and ordinary `/`.
+
+#### The raise module
+
+```scheme
+(define (install-raises)
+  (define (integer->rational n)
+    (make-rational n 1))
+  (define (rational->real r)
+    (make-real (exact->inexact (/ (car r) (cdr r)))))
+  (define (real->complex x)
+    (make-complex-from-real-imag x 0))
+
+  (put 'raise '(integer)  integer->rational)
+  (put 'raise '(rational) rational->real)
+  (put 'raise '(real)     real->complex)
   'done)
 ```
 
-Now then, to implement our raise procedures, we'll need to define a procedure that raise one numeric data type to the next within each corresponding package. Then, we put each raise procedure into the operation-lookup table, and create a generic `raise` procedure that applies the correct raise operation:
+`apply-generic` strips the type tag before calling the proc, so each `raise` procedure receives just the contents and uses its sibling-package constructors to produce the next rung. Adding (or inserting) a new tower level is now a one-file edit to `raises.rkt`.
+
+The generic dispatcher in [`generics.rkt`](./generics.rkt) is the one line you'd expect:
 
 ```scheme
-(define (raise x) (apply-generic 'raise x)) ; generic raise procedure
-...
-; in the newly created integer package
-  (define (integer->rational n)
-    (make-rational n 1))
-  (put 'raise '(integer) integer->rational)
-...
-; in the rational package
-  (define (rational->real n)
-    (make-real (exact->inexact (/ (numer n) (denom n)))))
-  (put 'raise '(rational) rational->real)
-...
-; in the newly created real package
-  (define (real->complex n)
-    (make-complex-from-real-imag n 0))
-  (put 'raise '(real) real->complex)
+(define (raise x) (apply-generic 'raise x))
 ```
+
+#### How this relates to the book
+
+The book frames `raise` as the elementary upward coercion that the next two exercises build on: 2.84 makes `apply-generic` raise mixed-type arguments along the tower to a common rung (a much more principled strategy than 2.82's "try every type as a target"), and 2.85 introduces `project` as `raise`'s inverse so results can be `drop`ped back down. So 2.83 is really laying down the *protocol*: every type below the top must declare "here is how I become the next type up." Putting that declaration in `raises.rkt` makes the tower a single, explicit object in the system, the same way `coercions.rkt` makes the coercion graph explicit.
 
 Some tests:
 ```scheme
-> (define int_n (make-integer 5))
-> (define rat_n (make-rational 3 4))
-> (define real_n (make-real 1.2))
-> (raise int_n)
+> (raise (make-integer 5))
 (rational 5 . 1)
-> (raise rat_n)
+> (raise (make-rational 3 4))
 (real . 0.75)
-> (raise real_n)
+> (raise (make-real 1.2))
 (complex rectangular 1.2 . 0)
+> (raise (raise (make-integer 5)))
+(real . 5.0)
+> (raise (raise (raise (make-integer 5))))
+(complex rectangular 5.0 . 0)
 ```
 
 ---
