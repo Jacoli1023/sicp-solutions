@@ -37,3 +37,42 @@
                           (t2->t1 (new-apply-generic op a1 (t2->t1 a2)))
                           (else (err))))))
             (err)))))
+
+;; --------------------------------------------------------------------
+;; Generalized apply procedure with N-arg coercion - Exercise 2.82
+;; --------------------------------------------------------------------
+
+(define (coerce-arg target arg)
+  (let ((source (type-tag arg)))
+    (if (eq? source target)
+        arg
+        (let ((coerce (get-coercion source target)))
+          (if coerce (coerce arg) false)))))
+
+(define (coerce-args target args)
+  (define (loop args acc)
+    (if (null? args)
+        (reverse acc)
+        (let ((coerced (coerce-arg target (car args))))
+          (if coerced
+              (loop (cdr args) (cons coerced acc))
+              false))))
+  (loop args '()))
+
+(define (multi-apply-generic op . args)
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (define (try-targets candidates)
+      (if (null? candidates)
+          (error "No method for these types" (list op type-tags))
+          (let* ((target (car candidates))
+                 (coerced (coerce-args target args)))
+            ;; only recurse if coercion changed the signature, else
+            ;; (op T T ...) with no method would loop forever
+            (if (and coerced
+                     (not (equal? (map type-tag coerced) type-tags)))
+                (apply multi-apply-generic op coerced)
+                (try-targets (cdr candidates))))))
+    (if proc
+        (apply proc (map contents args))
+        (try-targets type-tags))))
