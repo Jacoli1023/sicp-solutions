@@ -42,3 +42,11 @@
 (define get (operation-table 'lookup-proc))
 (define put (operation-table 'insert-proc!))
 (define reset (operation-table 'reset-proc!))
+
+;; --------------------------------------------------------------------
+;; Coercion operations for 2.5.2
+;; --------------------------------------------------------------------
+
+(define coercion-table (make-table))
+(define get-coercion (coercion-table 'lookup-proc))
+(define put-coercion (coercion-table 'insert-proc!))
