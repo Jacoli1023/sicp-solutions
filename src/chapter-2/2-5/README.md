@@ -377,106 +377,99 @@ Some tests:
 (complex rectangular 5.0 . 0)
 ```
 
+This is all easy architectural stuff though. Now we need to incorporate this logic into our `apply-generic` procedures!
+
 ---
 ### Exercise 2.84
 
 Solution:
 
-The first step to modifying the `apply-generic` procedure to use the new `raise` procedure is create a hierarchy structure for our data types. The simplest method for doing so is (of course) creating a list, and then `cdr`ing down to find the correct data type in the hierarchy.
+The exercise asks for two things at once: a tower-aware `apply-generic`, and a *way of testing which type is higher* that won't have to be rewritten every time a new rung is added. My earlier attempt put a `type-tower` list directly into the body of `apply-generic` and nested all of the helpers (`find-type-level`, `find-highest-type-level`, `raise-to`) as internal definitions — `find-highest-type-level` even closed over `args` from the enclosing scope, which made it impossible to reuse for `drop` in 2.85. It also inherited the same infinite-recursion trap as my 2.82 attempt: if no method is found and every argument is already at the top of the tower, it would re-raise to the same types and recurse forever.
 
-```solution
-(define type-tower
-  '(integer rational real complex))
-```
+The cleaner shape factors the tower out of the dispatcher entirely.
 
-Now for some helper functions that we'll need. For our `apply-generic` procedure to work with a data type hierarchy, we'll need to be able to find the type level of a given argument, find the highest type level present in an argument list, and be able to raise an argument's type to a specific type level. Here are the following helper procedures designed to give us this functionality:
+#### The tower module
 
-```scheme
-  ; helper function to find the numeric level of the data type within
-  ; the given tower hierarchy
-  (define (find-type-level type)
-    (define (iter tower n)
-      (cond ((null? tower) #f)
-            ((eq? type (car tower)) n)
-            (else (iter (cdr tower) (+ n 1)))))
-    (iter type-tower 0))
-
-  ; finds the highest data type level in a given list of args
-  (define (find-highest-type-level)
-    (define (iter arg-list highest)
-      (if (null? arg-list)
-          highest
-          (let ((type-level (find-type-level (type-tag (car arg-list)))))
-            (if (> type-level highest)
-                (iter (cdr arg-list) type-level)
-                (iter (cdr arg-list) highest)))))
-    (iter args (find-type-level (type-tag (car args)))))
-
-  ; raises given argument to the target type-level in the hierarchy
-  (define (raise-to arg target-type-level)
-    (let ((type-level (find-type-level (type-tag arg))))
-      (cond ((= type-level target-type-level) arg)
-            ((< type-level target-type-level)
-             (raise-to (raise arg) target-type-level))
-            (else (error "Cannot raise argument to a lower type-level"
-                         arg target-type-level)))))
-```
-
-Now to plug these into our `apply-generic` procedure. I'm using these as internal definitions, however it can be reasonable to define them outside of the `apply-generic` procedure as well, with a few modifications:
+The hierarchy is a system-wide property, not something `apply-generic` owns. It lives in a small leaf module, [`tower.rkt`](./tower.rkt), with no dependencies — so anything else (the dispatcher today, `drop` tomorrow) can use it freely.
 
 ```scheme
-(define (apply-generic op . args)
+(define type-tower '(integer rational real complex))
 
-  ; helper function to find the numeric level of the data type within
-  ; the given tower hierarchy
-  (define (find-type-level type)
-    (define (iter tower n)
-      (cond ((null? tower) #f)
-            ((eq? type (car tower)) n)
-            (else (iter (cdr tower) (+ n 1)))))
-    (iter type-tower 0))
+(define (type-level type)
+  (define (iter tower n)
+    (cond ((null? tower) false)
+          ((eq? type (car tower)) n)
+          (else (iter (cdr tower) (+ n 1)))))
+  (iter type-tower 0))
 
-  ; finds the highest data type level in a given list of args
-  (define (find-highest-type-level)
-    (define (iter arg-list highest)
-      (if (null? arg-list)
-          highest
-          (let ((type-level (find-type-level (type-tag (car arg-list)))))
-            (if (> type-level highest)
-                (iter (cdr arg-list) type-level)
-                (iter (cdr arg-list) highest)))))
-    (iter args (find-type-level (type-tag (car args)))))
+(define (highest-type types)
+  (define (higher t1 t2)
+    (if (> (type-level t1) (type-level t2)) t1 t2))
+  (define (iter types highest)
+    (if (null? types) highest
+        (iter (cdr types) (higher (car types) highest))))
+  (iter (cdr types) (car types)))
+```
 
-  ; raises given argument to the target type-level in the hierarchy
-  (define (raise-to arg target-type-level)
-    (let ((type-level (find-type-level (type-tag arg))))
-      (cond ((= type-level target-type-level) arg)
-            ((< type-level target-type-level)
-             (raise-to (raise arg) target-type-level))
-            (else (error "Cannot raise argument to a lower type-level"
-                         arg target-type-level)))))
+Inserting a new rung — say `bignum` between `integer` and `rational` — is now a one-symbol edit to `type-tower`. Nothing else changes.
 
-  ; apply-generic
+#### The dispatcher
+
+`apply-generic.rkt` gains two small top-level helpers and the new dispatcher. Notice that `raise-to` walks the operation table's `'raise` chain directly; it never needs to know the tower's structure, only that the chain eventually reaches the target type or runs out:
+
+```scheme
+(define (raise-to target arg)
+  (let ((source (type-tag arg)))
+    (if (eq? source target)
+        arg
+        (let ((raise-proc (get 'raise (list source))))
+          (if raise-proc
+              (raise-to target (raise-proc (contents arg)))
+              false)))))
+
+(define (raise-all-to target args)
+  (define (iter args acc)
+    (if (null? args)
+        (reverse acc)
+        (let ((raised (raise-to target (car args))))
+          (if raised
+              (iter (cdr args) (cons raised acc))
+              false))))
+  (iter args '()))
+
+(define (tower-apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
     (if proc
         (apply proc (map contents args))
-        (let ((target-type-level (find-highest-type-level)))
-          (apply apply-generic op (map (lambda (arg)
-                                         (raise-to arg target-type-level))
-                                       args))))))
+        (let* ((target (highest-type type-tags))
+               (raised (raise-all-to target args)))
+          ;; same guard as 2.82: only recurse if the signature changed,
+          ;; else (op T T ...) with no method would loop forever
+          (if (and raised
+                   (not (equal? (map type-tag raised) type-tags)))
+              (apply tower-apply-generic op raised)
+              (error "No method for these types" (list op type-tags)))))))
 ```
 
-Now for a few tests:
+The signature-changed guard is the fix for the infinite-recursion case. It mirrors the same trick used in `multi-apply-generic` for 2.82.
+
+#### How this relates to the book
+
+2.82 treated coercion as a flat graph: try every type as a target and see what sticks. 2.84 replaces that with the tower's *hierarchy*: pick the highest type among the arguments, raise everyone there, dispatch. This is fundamentally more principled because the tower encodes the *meaning* of the type relationships — `integer -> rational -> real -> complex` — instead of treating each conversion as an opaque entry. The book's hint — "do this in a manner that is compatible with the rest of the system and will not lead to problems in adding new levels to the tower" — is asking you to make the hierarchy a single explicit object that one edit can extend, rather than scattering "is X above Y?" knowledge into every dispatcher. Putting the tower in its own module (and walking the existing `'raise` table to climb it) does exactly that.
+
+Some tests:
 ```scheme
-> (add int_n rat_n)
-(rational 5 . 3)
-> (add rat_n int_n)
-(rational 5 . 3)
-> (mul int_n (add rat_n real_n))
-(real . 6.266666666666667)
-> (add rat_n complex_n)
-(complex rectangular 7.666666666666667 . 8)
+> (tower-apply-generic 'add (make-integer 5) (make-rational 1 3))
+(rational 16 . 3)
+> (tower-apply-generic 'add (make-rational 1 3) (make-integer 5))
+(rational 16 . 3)
+> (tower-apply-generic 'add (make-integer 1) (make-real 2.5))
+(real . 3.5)
+> (tower-apply-generic 'add (make-rational 1 2) (make-complex-from-real-imag 1 2))
+(complex rectangular 1.5 . 2)
+> (tower-apply-generic 'add (make-integer 5) (make-integer 7))
+(integer . 12)
 ```
 
 ---

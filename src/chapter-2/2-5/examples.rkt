@@ -53,3 +53,14 @@
 (raise (raise (make-integer 5)))           ; EO: (real . 5.0)
 (raise (raise (raise (make-integer 5))))   ; EO: (complex rectangular 5.0 . 0)
 (newline)
+
+;; 2.84, tower-apply-generic raises mixed args to a common rung
+(display "EX 2.84")
+(newline)
+(tower-apply-generic 'add (make-integer 5) (make-rational 1 3))   ; EO: (rational 16 . 3)
+(tower-apply-generic 'add (make-rational 1 3) (make-integer 5))   ; EO: (rational 16 . 3)
+(tower-apply-generic 'add (make-integer 1) (make-real 2.5))       ; EO: (real . 3.5)
+(tower-apply-generic 'add (make-rational 1 2) (make-complex-from-real-imag 1 2))
+;; EO: (complex rectangular 1.5 . 2)
+(tower-apply-generic 'add (make-integer 5) (make-integer 7))      ; EO: (integer . 12)
+(newline)

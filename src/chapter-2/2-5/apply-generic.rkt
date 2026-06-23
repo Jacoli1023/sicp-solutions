@@ -1,5 +1,5 @@
 #lang sicp
-(#%require "table.rkt" "tags.rkt")
+(#%require "table.rkt" "tags.rkt" "tower.rkt")
 (#%provide (all-defined))
 
 ;; --------------------------------------------------------------------
@@ -76,3 +76,43 @@
     (if proc
         (apply proc (map contents args))
         (try-targets type-tags))))
+
+;; --------------------------------------------------------------------
+;; Tower-aware apply procedure - Exercise 2.84
+;; Raises every argument to the highest type in the tower among the
+;; arguments, then re-dispatches. Tower data lives in tower.rkt; this
+;; dispatcher knows only how to walk the 'raise table.
+;; --------------------------------------------------------------------
+
+(define (raise-to target arg)
+  (let ((source (type-tag arg)))
+    (if (eq? source target)
+        arg
+        (let ((raise-proc (get 'raise (list source))))
+          (if raise-proc
+              (raise-to target (raise-proc (contents arg)))
+              false)))))
+
+(define (raise-all-to target args)
+  (define (iter args acc)
+    (if (null? args)
+        (reverse acc)
+        (let ((raised (raise-to target (car args))))
+          (if raised
+              (iter (cdr args) (cons raised acc))
+              false))))
+  (iter args '()))
+
+(define (tower-apply-generic op . args)
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (if proc
+        (apply proc (map contents args))
+        (let* ((target (highest-type type-tags))
+               (raised (raise-all-to target args)))
+          ;; same guard as 2.82: only recurse if the signature changed,
+          ;; else (op T T ...) with no method would loop forever
+          (if (and raised
+                   (not (equal? (map type-tag raised) type-tags)))
+              (apply tower-apply-generic op raised)
+              (error "No method for these types" (list op type-tags)))))))

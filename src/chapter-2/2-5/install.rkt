@@ -1,11 +1,12 @@
 #lang sicp
-(#%require "tags.rkt" "table.rkt" "generics.rkt" "apply-generic.rkt"
+(#%require "tags.rkt" "table.rkt" "tower.rkt" "generics.rkt" "apply-generic.rkt"
            "pkg-scheme-number.rkt" "pkg-integer.rkt" "pkg-rational.rkt"
            "pkg-real.rkt" "pkg-polar.rkt" "pkg-rectangular.rkt" "pkg-complex.rkt"
            "coercions.rkt" "raises.rkt")
 (#%provide (all-defined)
            (all-from "tags.rkt")
            (all-from "table.rkt")
+           (all-from "tower.rkt")
            (all-from "generics.rkt")
            (all-from "apply-generic.rkt")
            (all-from "pkg-scheme-number.rkt")
