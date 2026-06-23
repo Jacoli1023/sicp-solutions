@@ -1,5 +1,5 @@
 #lang sicp
-(#%require "tags.rkt" "table.rkt" "generics.rkt" "apply-generic.rkt" "pkg-integer.rkt" "pkg-rational.rkt" "pkg-polar.rkt" "pkg-rectangular.rkt" "pkg-complex.rkt" "install.rkt")
+(#%require "install.rkt")
 (using numeric-pkg)
 
 ;; base functionality of packages

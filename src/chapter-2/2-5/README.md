@@ -228,61 +228,83 @@ Solution:\
 
 Solution:
 
-This one was a bit of a pain in the butt, and could definitely be rewritten to be more pretty, but it works and I'm not complaining.
+Coming back to this, I want to refactor my earlier attempt. The previous version nested every helper inside `apply-generic`, used `(member #f ...)` as the "no coercion found" signal, and dropped the same-type guard I had in 2.81 — which leaves a path to infinite recursion when the table has no method for the given signature.
+
+The cleaner shape is three top-level pieces, each doing one job. The coercion helpers are pure and reusable; only the dispatcher knows about the operation table:
+
 ```scheme
-(define (apply-generic op . args)
+(define (coerce-arg target arg)
+  (let ((source (type-tag arg)))
+    (if (eq? source target)
+        arg
+        (let ((coerce (get-coercion source target)))
+          (if coerce (coerce arg) false)))))
 
-  (define (coercable? coerce-procs)
-    (not (member #f coerce-procs)))
+(define (coerce-args target args)
+  (define (loop args acc)
+    (if (null? args)
+        (reverse acc)
+        (let ((coerced (coerce-arg target (car args))))
+          (if coerced
+              (loop (cdr args) (cons coerced acc))
+              false))))
+  (loop args '()))
 
-  (define (coerce-args coercion-procs args)
-    (map (lambda (coerce-proc arg)
-           (coerce-proc arg))
-         coercion-procs
-         args))
-
+(define (multi-apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
-    (define (try-coercion tags)
-      (if (null? tags)
-          (error "No method for these types - APPLY-GENERIC" (list op type-tags))
-          (let* ((target-type (car tags))
-                 (arg-coercions (map (lambda (coerce-from)
-                                       (if (eq? coerce-from target-type)
-                                           identity
-                                           (get-coercion coerce-from target-type)))
-                                     type-tags)))
-            (if (coercable? arg-coercions)
-                (apply apply-generic
-                       op
-                       (coerce-args arg-coercions args))
-                (try-coercion (cdr tags))))))
+    (define (try-targets candidates)
+      (if (null? candidates)
+          (error "No method for these types" (list op type-tags))
+          (let* ((target (car candidates))
+                 (coerced (coerce-args target args)))
+            ;; only recurse if coercion changed the signature, else
+            ;; (op T T ...) with no method would loop forever
+            (if (and coerced
+                     (not (equal? (map type-tag coerced) type-tags)))
+                (apply multi-apply-generic op coerced)
+                (try-targets (cdr candidates))))))
     (if proc
         (apply proc (map contents args))
-        (try-coercion type-tags))))
+        (try-targets type-tags))))
 ```
 
-Be sure to include the proper coercion procedures within each relevant arithmetic package. 
+To actually exercise the dispatcher we need cross-type coercions in the coercion table. Rather than scattering `put-coercion` calls through each numeric package — which would couple `pkg-integer.rkt` to the existence of rationals and complexes — I put them in a new [`coercions.rkt`](./coercions.rkt) module and have `numeric-pkg` install it from [`install.rkt`](./install.rkt):
+
+```scheme
+(define (install-coercions)
+  (define (scheme-number->rational n)
+    (make-rational (contents n) 1))
+  (define (scheme-number->complex n)
+    (make-complex-from-real-imag (contents n) 0))
+  (define (rational->complex r)
+    (let ((nd (contents r)))
+      (make-complex-from-real-imag (/ (car nd) (cdr nd)) 0)))
+
+  (put-coercion 'scheme-number 'rational scheme-number->rational)
+  (put-coercion 'scheme-number 'complex  scheme-number->complex)
+  (put-coercion 'rational      'complex  rational->complex)
+  'done)
+```
 
 Some tests:
-```scheme
-> (define sn (make-scheme-number 5))
-> (define rn (make-rational 3 4))
-> (define cn (make-complex-from-real-imag 1 2))
 
-> (apply-generic 'add sn sn)
-10
-> (apply-generic 'add sn rn)
+```scheme
+> (multi-apply-generic 'add 1 2)
+3
+> (multi-apply-generic 'add 5 (make-rational 3 4))
 (rational 23 . 4)
-> (apply-generic 'add rn rn)
-(rational 3 . 2)
-> (apply-generic 'add rn sn)
+> (multi-apply-generic 'add (make-rational 3 4) 5)
 (rational 23 . 4)
-> (apply-generic 'add rn cn)
-(complex rectangular 1 3/4 . 2)
-> (apply-generic 'add sn cn)
+> (multi-apply-generic 'add 5 (make-complex-from-real-imag 1 2))
 (complex rectangular 6 . 2)
+> (multi-apply-generic 'add (make-rational 1 2) (make-complex-from-real-imag 1 2))
+(complex rectangular 3/2 . 2)
 ```
+
+#### Where this strategy is not sufficiently general
+
+Suppose the table holds a directly-installed mixed-type operation, say `(op rational complex)`, and we call `(op some-integer some-complex)`. The strategy tries to coerce both args to `integer` (fails: there is no `complex→integer`), then both to `complex` (succeeds via `integer→complex`), and dispatches to `(op complex complex)` — stepping right over the more specific `(op rational complex)` that needed only an `integer→rational` coercion. The strategy *insists* on collapsing every argument to a single type, so any directly-installed mixed-type method whose signature doesn't already match the input is invisible to it.
 
 ---
 ### Exercise 2.83
