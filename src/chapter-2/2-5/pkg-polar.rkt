@@ -1,11 +1,11 @@
 #lang sicp
-(#%require "tags.rkt" "table.rkt")
-(#%provide (all-defined-except square))
-
-(define (square x) (* x x))
+(#%require "tags.rkt" "table.rkt" "generics.rkt")
+(#%provide (all-defined))
 
 ;; --------------------------------------------------------------------
 ;; Complex-polar package from 2.4.3
+;; Internals use generic arithmetic and transcendentals so components
+;; can be any tower-typed value (integer, rational, real). - Exercise 2.86
 ;; --------------------------------------------------------------------
 
 (define (install-polar-package)
@@ -14,12 +14,12 @@
   (define (angle z) (cdr z))
   (define (make-from-mag-ang r a) (cons r a))
   (define (real-part z)
-    (* (magnitude z) (cos (angle z))))
+    (mul (magnitude z) (cosine (angle z))))
   (define (imag-part z)
-    (* (magnitude z) (sin (angle z))))
+    (mul (magnitude z) (sine (angle z))))
   (define (make-from-real-imag x y)
-    (cons (sqrt (+ (square x) (square y)))
-          (atan y x)))
+    (cons (square-root (add (square x) (square y)))
+          (arctan y x)))
   ;; interface to the rest of the system
   (define (tag x) (attach-tag 'polar x))
   (put 'real-part '(polar) real-part)
@@ -27,9 +27,9 @@
   (put 'magnitude '(polar) magnitude)
   (put 'angle '(polar) angle)
   (put 'make-from-real-imag 'polar
-       (lambda (x y) 
+       (lambda (x y)
          (tag (make-from-real-imag x y))))
   (put 'make-from-mag-ang 'polar
-       (lambda (r a) 
+       (lambda (r a)
          (tag (make-from-mag-ang r a))))
   'done)

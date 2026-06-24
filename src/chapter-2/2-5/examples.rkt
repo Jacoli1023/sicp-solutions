@@ -9,7 +9,10 @@
 (add (make-scheme-number 1) (make-scheme-number 2)) ; EO: (scheme-number . 3)
 (sub (make-rational 3 4) (make-rational 1 2)) ; EO: (rational 1 . 4)
 (mul (make-rational 1 2) (make-rational 1 3)) ; EO: (rational 1 . 6)
-(add (make-complex-from-mag-ang 1 0) (make-complex-from-real-imag 1 1)) ; EO: (complex rectangular 2 . 1)
+(add (make-complex-from-mag-ang 1 0) (make-complex-from-real-imag 1 1))
+;; EO: (complex rectangular (integer . 2) integer . 1)
+;; Components are tagged after 2.86 -- the polar real-part path is now
+;; generic, so cosine(0) returns (integer . 1) instead of the raw 1.
 (newline)
 
 ;; following 2.78, scheme numbers are just integers
@@ -87,4 +90,29 @@
 ;; EO: (rational 1 . 6)
 (simplifying-apply-generic 'add (make-rational 1 3) (make-rational 2 3))
 ;; EO: (integer . 1)
+(newline)
+
+;; 2.86, generic transcendentals work on any tower type
+(display "EX 2.86 / generic transcendentals")
+(newline)
+(square-root (make-integer 9))   ; EO: (integer . 3)
+(sine (make-integer 0))          ; EO: (integer . 0)
+(cosine (make-integer 0))        ; EO: (integer . 1)
+(square-root (make-real 2.0))    ; EO: rational approx of sqrt(2)
+(arctan (make-integer 1) (make-integer 1)) ; EO: rational approx of pi/4
+(newline)
+
+;; 2.86, complex numbers with heterogeneous tagged components
+(display "EX 2.86 / heterogeneous complex")
+(newline)
+(define z1 (make-complex-from-real-imag (make-rational 1 2) (make-integer 1)))
+(define z2 (make-complex-from-real-imag (make-integer 3) (make-rational 1 4)))
+z1
+;; EO: (complex rectangular (rational 1 . 2) integer . 1)
+(add z1 z2)
+;; EO: (complex rectangular (rational 7 . 2) rational 5 . 4)
+(equ? z1 z1) ; EO: #t
+(equ? z1 z2) ; EO: #f
+(drop (make-complex-from-real-imag (make-rational 3 2) (make-integer 0)))
+;; EO: (rational 3 . 2) -- complex with imag=0 and tagged real-part
 (newline)

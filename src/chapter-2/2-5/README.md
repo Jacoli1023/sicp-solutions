@@ -628,159 +628,174 @@ $ racket -i src/chapter-2/2-5/install.rkt
 
 Solution:
 
-In order for our complex numbers to work with our own user-defined data types, we must generalize the procedures within the complex number package. Those such as `add-complex` and `mul-complex` must now use our generic procedures `add` and `mul` instead of Scheme's `+` and `*`, respectively.
+This was the straw that broke the camel's back on my first attempt — not because the exercise itself is unusually hard, but because it stress-tests every shortcut I'd taken in the earlier exercises. With the cleaner 2.83-2.85 architecture in place, 2.86 collapses into a small number of surgical changes plus one genuine extension to the dispatcher.
+
+#### Where the first attempt went wrong
+
+A few separable mistakes, ordered by how badly they violated the modular spirit of the section:
+
+1. **Fat packages.** I installed `square-root`/`sine`/`cosine`/`arctan` in *every* numeric package (integer, rational, real), each one essentially saying "convert me to real, do the math, return real." That's the same anti-pattern the modular rework was supposed to escape; the tower already encodes "to do something only reals know how to do, raise first." Each duplicate also hardcoded the relationship from its own package to `real` via an explicit `make-real` call, so inserting a new rung between rational and real would have broken every trig declaration in every package.
+2. **The `reduce` op-name switch came back.** I extended the `(cond ((eq? op 'add) (drop x)) ... ((eq? op 'sine) (drop x)) ...)` block to cover the trig ops. The 2.85 rework had already replaced that with the structural `tower-value?` predicate; I just didn't notice the new mechanism made the switch obsolete.
+3. **`equ?` for complex used `=`.** I compared components with Scheme's `=`, which can't compare tagged tower values. Has to be the generic `equ?`.
+4. **The dispatcher never climbed past the highest input.** Even if I'd installed transcendentals only on real, the existing 2.84 `tower-apply-generic` only normalizes arguments to *the highest type among them*. A call like `(cosine (make-integer 0))` doesn't reach real because integer is already the "highest" — there's nothing higher to raise toward.
+
+The first three are local quirks, but they were really workarounds for the fourth: the missing dispatcher behavior forced me to install transcendentals everywhere because the dispatcher couldn't get them where they needed to go.
+
+#### The architectural addition: keep climbing the tower
+
+The single new idea for 2.86 is that the dispatcher should keep climbing the tower until it either finds a method or hits the top. The "raise everyone to the highest input type" step from 2.84 is one normalization; if it doesn't change the signature and there's still no method, raise everyone *one more rung* and try again:
 
 ```scheme
-; internal definitions of the complex number package
-  (define (add-complex z1 z2)
-    (make-from-real-imag (add (real-part z1) (real-part z2))
-                         (add (imag-part z1) (imag-part z2))))
-  (define (sub-complex z1 z2)
-    (make-from-real-imag (sub (real-part z1) (real-part z2))
-                         (sub (imag-part z1) (imag-part z2))))
-  (define (mul-complex z1 z2)
-    (make-from-mag-ang (mul (magnitude z1) (magnitude z2))
-                       (add (angle z1) (angle z2))))
-  (define (div-complex z1 z2)
-    (make-from-mag-ang (div (magnitude z1) (magnitude z2))
-                       (sub (angle z1) (angle z2))))
+(define (raise-once arg)
+  (let ((rp (get 'raise (list (type-tag arg)))))
+    (and rp (rp (contents arg)))))
+
+(define (raise-all-once args) ...)
+
+(define (tower-apply-generic op . args)
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (if proc
+        (apply proc (map contents args))
+        (let* ((target (highest-type type-tags))
+               (raised (raise-all-to target args)))
+          (cond
+           ;; Normalize succeeded and changed the signature: retry.
+           ((and raised
+                 (not (equal? (map type-tag raised) type-tags)))
+            (apply tower-apply-generic op raised))
+           ;; Same signature - try climbing one more rung. Lets a
+           ;; single-arg call like (cosine integer) walk up to real.
+           (else
+            (let ((climbed (raise-all-once args)))
+              (if (and climbed
+                       (not (equal? (map type-tag climbed) type-tags)))
+                  (apply tower-apply-generic op climbed)
+                  (error "No method for these types" (list op type-tags))))))))))
 ```
 
-We now also need to ensure the procedures within the polar and rectangular sub-packages are using generic arithmetic procedures. This means, as the problem statement suggests, we must create generic procedures for the square root, sine, cosine, and inverse tangent functions. We'll go ahead and implement these into our respective number packages:
+With this, `(cosine (make-integer 0))` works because the dispatcher climbs integer -> rational -> real, finds the method registered on `'real`, and dispatches. Termination is still guaranteed: the climb stops when no `'raise` exists for the current type (complex is the top).
+
+The `'scheme-number` type is a legacy convenience tag for bare numbers (`1`, `2.5`, `1/3`). To let it ride the same machinery, `raises.rkt` gains an entry that promotes it onto the tower based on its exactness:
 
 ```scheme
-; integer package
-  (put 'square-root '(integer) (lambda (x) (make-real (sqrt x))))
-  (put 'sine' (integer) (lambda (x) (make-real (sin x))))
-  (put 'cosine '(integer) (lambda (x) (make-real (cos x))))
-  (put 'arctan '(integer integer) (lambda (x y) (make-real (atan x y))))
-...
-...
-; rational package
-  (define (ratio x) (/ (numer x) (denom x)))
-  (put 'square-root '(rational) (lambda (x) (make-real (sqrt (ratio x)))))
-  (put 'sine '(rational) (lambda (x) (make-real (sin (ratio x)))))
-  (put 'cosine '(rational) (lambda (x) (make-real (cos (ratio x)))))
-  (put 'arctan '(rational) 
-       (lambda (y x) (make-real (atan (ratio y) (ratio x)))))
-...
-...
-; real package
-  (put 'square-root '(real) (lambda (x) (tag (sqrt x))))
-  (put 'sine '(real) (lambda (x) (tag (sin x))))
-  (put 'cosine '(real) (lambda (x) (tag (cos x))))
-  (put 'arctan '(real real) (lambda (y x) (tag (atan y x))))
-...
-...
-; generic procedures
-(define (square x) (mul x x))
-(define (square-root x) (apply-generic 'square-root x))
-(define (sine x) (apply-generic 'sine x))
-(define (cosine x) (apply-generic 'cosine x))
-(define (arctan x y) (apply-generic 'arctan x y))
+(define (scheme-number->tower n)
+  (cond ((and (exact? n) (integer? n)) (make-integer n))
+        ((exact? n) (make-rational (numerator n) (denominator n)))
+        (else (make-real n))))
+
+(put 'raise '(scheme-number) scheme-number->tower)
 ```
 
-With these defined and implemented, we can now rewrite the procedures in the rectangular and polar complex number packages:
+And `tower.rkt`'s `highest-type` learns to treat non-tower types as below the lowest rung, so a mixed `(scheme-number rational)` comparison doesn't blow up when comparing `#f` to a level number:
 
 ```scheme
-(define (rectangular-pkg)
-  ;; Internal procedures
-  (define real-part car)
-  (define imag-part cdr)
-  (define make-from-real-imag cons)
-  (define (magnitude z)
-    (square-root (add (square (real-part z))
-                      (square (imag-part z)))))
-  (define (angle z)
-    (arctan (imag-part z) (real-part z)))
-  (define (make-from-mag-ang r a)
-    (cons (mul r (cosine a)) (mul r (sine a))))
-
-  ;; Interface to the rest of the system
-  (define (tag x) (attach-tag 'rectangular x))
-  (put 'real-part '(rectangular) real-part)
-  (put 'imag-part '(rectangular) imag-part)
-  (put 'magnitude '(rectangular) magnitude)
-  (put 'angle '(rectangular) angle)
-  (put 'make-from-real-imag 'rectangular
-       (lambda (x y) (tag (make-from-real-imag x y))))
-  (put 'make-from-mag-ang 'rectangular
-       (lambda (r a) (tag (make-from-mag-ang r a)))))
-
-(define (polar-pkg)
-  ;; Internal procedures
-  (define magnitude car)
-  (define angle cdr)
-  (define make-from-mag-ang cons)
-  (define (real-part z)
-    (mul (magnitude z) (cosine (angle z))))
-  (define (imag-part z)
-    (mul (magnitude z) (sine (angle z))))
-  (define (make-from-real-imag x y)
-    (cons (square-root (add (square x) (square y)))
-          (arctan y x)))
-
-  ;; Interface to the rest of the system
-  (define (tag x) (attach-tag 'polar x))
-  (put 'real-part '(polar) real-part)
-  (put 'imag-part '(polar) imag-part)
-  (put 'magnitude '(polar) magnitude)
-  (put 'angle '(polar) angle)
-  (put 'make-from-real-imag 'polar
-       (lambda (x y) (tag (make-from-real-imag x y))))
-  (put 'make-from-mag-ang 'polar
-       (lambda (r a) (tag (make-from-mag-ang r a)))))
+(define (highest-type types)
+  (define (level t) (or (type-level t) -1))
+  (define (higher t1 t2)
+    (if (> (level t1) (level t2)) t1 t2))
+  ...)
 ```
 
-Now then, we just need to fix a few more operations now that the components of the complex numbers could be different types, such as `equ?`. Now that our complex number's real part and imaginary part could be different data types, we'd need to be able to call `equ?` on the components themselves.
+#### Transcendentals live in one place
 
-We'll also need to update the list of possible reduceable operations in our `apply-generic` procedure, in order to include our new set of trigonomic functions:
+Now the trig and sqrt installations are one-line additions to `pkg-real.rkt`:
 
 ```scheme
-; within the complex number package, equ?
-  (put 'equ? '(complex complex)
-       (lambda (z1 z2)
-         (and (equ? (real-part z1) (real-part z2))
-              (equ? (imag-part z1) (imag-part z2)))))
-...
-...
-; within our apply-generic procedure
-  (define (reduce x)
-    (cond ((eq? op 'add) (drop x))
-          ((eq? op 'sub) (drop x))
-          ((eq? op 'mul) (drop x))
-          ((eq? op 'div) (drop x))
-          ((eq? op 'square-root) (drop x))
-          ((eq? op 'sine) (drop x))
-          ((eq? op 'cosine) (drop x))
-          ((eq? op 'arctan) (drop x))
-          (else x)))
+(put 'square-root '(real)      (lambda (x) (tag (sqrt x))))
+(put 'sine        '(real)      (lambda (x) (tag (sin x))))
+(put 'cosine      '(real)      (lambda (x) (tag (cos x))))
+(put 'arctan      '(real real) (lambda (y x) (tag (atan y x))))
 ```
 
-Now for a few tests, using the following numbers:
+The integer and rational packages don't know transcendentals exist. Add a new tower rung and these declarations don't move.
+
+#### Generics become tower-aware by default
+
+`generics.rkt` binds `add`/`sub`/`mul`/`div`/`equ?`/`=zero?` (and the new `square-root`/`sine`/`cosine`/`arctan`) to `simplifying-apply-generic` instead of the basic `apply-generic`. Without this, internal package code like `(add (real-part z1) (real-part z2))` can't add, say, a rational to a real:
 
 ```scheme
-(define int_n (make-integer 1))
-(define rat_n (make-rational 2 3))
-(define real_n (make-real 5.6))
-
-(define z1 (make-complex-from-real-imag rat_n int_n))
-(define z2 (make-complex-from-mag-ang real_n rat_n))
+(define (add x y) (simplifying-apply-generic 'add x y))
+(define (sub x y) (simplifying-apply-generic 'sub x y))
+;; etc.
+(define (square      x)   (mul x x))
+(define (square-root x)   (simplifying-apply-generic 'square-root x))
+(define (sine        x)   (simplifying-apply-generic 'sine x))
+(define (cosine      x)   (simplifying-apply-generic 'cosine x))
+(define (arctan      y x) (simplifying-apply-generic 'arctan y x))
 ```
 
+`raise` and `project` stay on the basic dispatcher — the 2.85 reasoning applies (simplifying would defeat `raise` by dropping it right back down).
+
+#### Polar / rectangular / complex use generics throughout
+
+The polar and rectangular packages drop their local `(define (square x) (* x x))`, gain `(#%require "generics.rkt")`, and swap built-ins for generics. Their bodies don't change shape; the only difference is the operators. Rectangular's `magnitude` and `angle`, for example:
+
 ```scheme
+(define (magnitude z)
+  (square-root (add (square (real-part z))
+                    (square (imag-part z)))))
+(define (angle z)
+  (arctan (imag-part z) (real-part z)))
+```
+
+The complex package does the same for its internal `add-complex`/`sub-complex`/`mul-complex`/`div-complex`, and makes `equ?` and `=zero?` recurse with generic versions:
+
+```scheme
+(put 'equ? '(complex complex)
+     (lambda (z1 z2)
+       (and (equ? (real-part z1) (real-part z2))
+            (equ? (imag-part z1) (imag-part z2)))))
+(put '=zero? '(complex)
+     (lambda (z)
+       (and (=zero? (real-part z))
+            (=zero? (imag-part z)))))
+```
+
+#### A small fix to `projects.rkt`
+
+Now that complex components can be tagged tower values, `complex->real` can't just do `(make-real (real-part z))` — `real-part` might return `(rational 3 . 2)`, and `(make-real '(rational 3 . 2))` produces the malformed `(real rational 3 . 2)`. The fix: raise the part up to real first, falling back to `make-real` only for raw scheme-numbers (preserving the pre-2.86 test paths):
+
+```scheme
+(define (complex->real z)
+  (let ((rp (real-part z)))
+    (if (and (pair? rp) (type-level (type-tag rp)))
+        (raise-to 'real rp)
+        (make-real rp))))
+```
+
+#### How this relates to the book
+
+The book's prompt for 2.86 is misleadingly modest: "you will have to define operations such as sine and cosine that are generic over ordinary numbers and rational numbers." Read literally, that suggests installing trig on every type. But the deeper lesson — the one the modular rework was building toward — is that the tower already gives you "generic over ordinary numbers and rational numbers" *for free*, provided the dispatcher knows how to walk up to where the method lives. So 2.86 fundamentally completes 2.84: the dispatcher must climb until it finds a method, not stop at "highest input." Once that's true, every other "change" in 2.86 is just turning Scheme built-ins into the corresponding generics — surgical, not architectural.
+
+Some tests:
+
+```scheme
+> (square-root (make-integer 9))
+(integer . 3)
+> (sine (make-integer 0))
+(integer . 0)
+> (cosine (make-integer 0))
+(integer . 1)
+> (square-root (make-real 2.0))
+(rational 6369051672525773 . 4503599627370496)    ; sqrt(2) as exact ratio
+> (arctan (make-integer 1) (make-integer 1))
+(rational 884279719003555 . 1125899906842624)     ; pi/4 as exact ratio
+
+> (define z1 (make-complex-from-real-imag (make-rational 1 2) (make-integer 1)))
+> (define z2 (make-complex-from-real-imag (make-integer 3) (make-rational 1 4)))
+> z1
+(complex rectangular (rational 1 . 2) integer . 1)
+> (add z1 z2)
+(complex rectangular (rational 7 . 2) rational 5 . 4)
 > (equ? z1 z1)
 #t
-> (equ? z1 z2)
-#f
-> (add z1 z2)
-(complex
- rectangular
- (rational 4279237606951109 . 844424930131968)
- rational
- 157023310231171
- .
- 35184372088832)
+> (drop (make-complex-from-real-imag (make-rational 3 2) (make-integer 0)))
+(rational 3 . 2)
 ```
 
-This set of exercises was rather difficult, and it looks like some generic procedures do not work anymore after making these changes. I do not believe that my `apply-generic`, `raise` and `projection` methods are the cleanest nor smoothest, yet these things have gotten quite entangled that it's a little hard to debug. I think my problem stems from me constantly modifying and altering the base arithmetic packages themselves, instead of creating new packages to add/install on top when the exercise problem asks for it. This is a better example of modularity and data additivity that the section was preaching for. At some point I would like to redo this section but with better programming principles so that these changes I implement do not break the previous set of packages.
+The big-rational results for `sqrt(2)` and `pi/4` are the same lossless `inexact->exact` artifact discussed in 2.85's "Why `drop` never stops at `real`" — the simplifying dispatcher auto-drops real values, and the lossless round-trip means they always drop further to rational.
+
+#### Reflecting on the original
+
+My note at the bottom of the old 2.86 ("some generic procedures do not work anymore... I think my problem stems from me constantly modifying and altering the base arithmetic packages") was the right intuition. The fix turned out to be exactly that: stop modifying the base packages. Transcendentals live in one package (real). The tower carries everyone else there. The dispatcher knows how to walk. Three files changed for the real architectural part of 2.86 (`tower.rkt`, `apply-generic.rkt`, `raises.rkt`); the rest is mechanical "Scheme builtin -> generic" swaps in polar/rectangular/complex.

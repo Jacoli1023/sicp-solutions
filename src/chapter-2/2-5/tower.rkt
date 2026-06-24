@@ -17,8 +17,11 @@
   (iter type-tower 0))
 
 (define (highest-type types)
+  ;; Non-tower types (e.g., 'scheme-number) compare as below the
+  ;; lowest tower rung, so a tower type always wins when present.
+  (define (level t) (or (type-level t) -1))
   (define (higher t1 t2)
-    (if (> (type-level t1) (type-level t2)) t1 t2))
+    (if (> (level t1) (level t2)) t1 t2))
   (define (iter types highest)
     (if (null? types) highest
         (iter (cdr types) (higher (car types) highest))))

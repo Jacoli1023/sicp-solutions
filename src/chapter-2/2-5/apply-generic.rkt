@@ -78,10 +78,11 @@
         (try-targets type-tags))))
 
 ;; --------------------------------------------------------------------
-;; Tower-aware apply procedure - Exercise 2.84
-;; Raises every argument to the highest type in the tower among the
-;; arguments, then re-dispatches. Tower data lives in tower.rkt; this
-;; dispatcher knows only how to walk the 'raise table.
+;; Tower-aware apply procedure - Exercise 2.84, extended in 2.86
+;; First normalizes arguments to a common rung (highest-type among
+;; them); if no method is found there, climbs one more rung and
+;; retries. The second step lets a single-arg call like (cosine integer)
+;; reach the real-only 'cosine method by walking the 'raise chain.
 ;; --------------------------------------------------------------------
 
 (define (raise-to target arg)
@@ -103,6 +104,20 @@
               false))))
   (iter args '()))
 
+(define (raise-once arg)
+  (let ((rp (get 'raise (list (type-tag arg)))))
+    (and rp (rp (contents arg)))))
+
+(define (raise-all-once args)
+  (define (iter args acc)
+    (if (null? args)
+        (reverse acc)
+        (let ((r (raise-once (car args))))
+          (if r
+              (iter (cdr args) (cons r acc))
+              false))))
+  (iter args '()))
+
 (define (tower-apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
@@ -110,12 +125,19 @@
         (apply proc (map contents args))
         (let* ((target (highest-type type-tags))
                (raised (raise-all-to target args)))
-          ;; same guard as 2.82: only recurse if the signature changed,
-          ;; else (op T T ...) with no method would loop forever
-          (if (and raised
-                   (not (equal? (map type-tag raised) type-tags)))
-              (apply tower-apply-generic op raised)
-              (error "No method for these types" (list op type-tags)))))))
+          (cond
+           ;; Normalize succeeded and changed the signature: retry.
+           ((and raised
+                 (not (equal? (map type-tag raised) type-tags)))
+            (apply tower-apply-generic op raised))
+           ;; Same signature - try climbing one more rung. Lets a
+           ;; single-arg call like (cosine integer) walk up to real.
+           (else
+            (let ((climbed (raise-all-once args)))
+              (if (and climbed
+                       (not (equal? (map type-tag climbed) type-tags)))
+                  (apply tower-apply-generic op climbed)
+                  (error "No method for these types" (list op type-tags))))))))))
 
 ;; --------------------------------------------------------------------
 ;; Simplifying apply procedure - Exercise 2.85
