@@ -579,6 +579,48 @@ So with this `project` / `raise` pair, the possible final destinations of `drop`
 
 To make values like `0.1` actually stop at `real`, we'd need a *lossy* `real→rational` (e.g., one that rounds to a small-denominator rational), so the round-trip would fail `equ?` for fragile floats. That's an aesthetic call, not the book's algorithm; the book's criterion is exactly the lossless round-trip, so the algorithm — applied faithfully — agrees with us. The exercise's prose ("1.5 + 0i can be lowered as far as real") is just loose phrasing of an example.
 
+#### Alternative: a single unified `apply-generic`
+
+The stacked-version approach I went with (`apply-generic`, `new-apply-generic`, `multi-apply-generic`, `tower-apply-generic`, `simplifying-apply-generic`) is convenient for showing the layers, but it doesn't follow the book's actual cadence — the book wants you to *keep editing the same `apply-generic`* as each exercise extends it. An alternative version that does exactly that — one procedure doing dispatch, tower-raising, and dropping in one body — is archived in [`apply-generic-unified.rkt`](./apply-generic-unified.rkt) as `unified-apply-generic`. The full text is in that file; the dispatch core is:
+
+```scheme
+(define (unified-apply-generic op . args)
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (cond
+     (proc
+      (let ((result (apply proc (map contents args))))
+        ;; Simplify only when (a) the result is a tower value, and
+        ;; (b) op isn't one of the tower-mechanic ops — otherwise the
+        ;; user-facing (raise x) would just be dropped back to x.
+        (if (and (not (memq op '(raise project equ?)))
+                 (pair? result)
+                 (type-level (type-tag result)))
+            (drop result)
+            result)))
+     (else
+      (let* ((target (highest-type type-tags))
+             (raised (raise-all-to target args)))
+        (if (and raised
+                 (not (equal? (map type-tag raised) type-tags)))
+            (apply unified-apply-generic op raised)
+            (error "No method for these types" (list op type-tags))))))))
+```
+
+Two design choices make this honest: (1) `drop` walks the operation table by hand (`(get 'project ...)`, `(get 'raise ...)`, `(get 'equ? ...)`) instead of going through `unified-apply-generic`, so the auto-simplification doesn't recursively re-enter itself; and (2) `unified-apply-generic` skips simplification for `raise`, `project`, and `equ?` — without this, calling `(unified-apply-generic 'raise (make-integer 5))` would compute `(rational 5 . 1)` and then drop it right back to `(integer . 5)`, defeating the user-facing meaning of `raise`.
+
+The price for unifying is that exclusion list, plus a load-bearing invariant — "`drop` must not go through `unified-apply-generic`" — that nothing in the type system enforces. The stacked approach pays no such price: `drop` calls the basic `apply-generic`, and the simplifying wrap is layered above as a separate procedure that never re-enters itself. That's why the rest of this section keeps using the stacked dispatchers; the unified version is here for comparison and as a faithful rendering of the book's "keep editing apply-generic" cadence.
+
+The file is intentionally not pulled in by `install.rkt`, so the operation table is unaffected. To play with it at the REPL alongside the normal system:
+
+```
+$ racket -i src/chapter-2/2-5/install.rkt
+> (#%require "apply-generic-unified.rkt")
+> (numeric-pkg)
+> (unified-apply-generic 'add (make-complex-from-real-imag 4 0) (make-integer 8))
+(integer . 12)
+> (unified-apply-generic 'raise (make-integer 5))
+(rational 5 . 1)
 ```
 
 ---
