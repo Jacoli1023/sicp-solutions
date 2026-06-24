@@ -116,3 +116,26 @@
                    (not (equal? (map type-tag raised) type-tags)))
               (apply tower-apply-generic op raised)
               (error "No method for these types" (list op type-tags)))))))
+
+;; --------------------------------------------------------------------
+;; Simplifying apply procedure - Exercise 2.85
+;; drop uses the basic apply-generic for its internal raise/project/equ?
+;; calls, so a simplifying outer dispatcher won't recursively re-drop.
+;; --------------------------------------------------------------------
+
+(define (drop x)
+  (let ((type (type-tag x)))
+    (cond ((not (type-level type)) x)
+          ((= (type-level type) 0) x)
+          (else
+           (let ((projected (apply-generic 'project x)))
+             (if (apply-generic 'equ? x (apply-generic 'raise projected))
+                 (drop projected)
+                 x))))))
+
+(define (tower-value? x)
+  (and (pair? x) (type-level (type-tag x))))
+
+(define (simplifying-apply-generic op . args)
+  (let ((result (apply tower-apply-generic op args)))
+    (if (tower-value? result) (drop result) result)))

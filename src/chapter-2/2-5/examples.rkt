@@ -64,3 +64,27 @@
 ;; EO: (complex rectangular 1.5 . 2)
 (tower-apply-generic 'add (make-integer 5) (make-integer 7))      ; EO: (integer . 12)
 (newline)
+
+;; 2.85, drop lowers a value as far as it can go
+(display "EX 2.85 / drop")
+(newline)
+(drop (make-complex-from-real-imag 4 0))      ; EO: (integer . 4)
+(drop (make-complex-from-real-imag 1.5 0))    ; EO: (rational 3 . 2)  [book says real; 1.5 = 3/2 exactly]
+(drop (make-complex-from-real-imag 2 3))      ; EO: (complex rectangular 2 . 3)
+(drop (make-rational 4 1))                    ; EO: (integer . 4)
+(drop (make-rational 3 2))                    ; EO: (rational 3 . 2)
+(drop (make-real 5.0))                        ; EO: (integer . 5)
+(newline)
+
+;; 2.85, simplifying-apply-generic does arithmetic then simplifies
+(display "EX 2.85 / simplifying-apply-generic")
+(newline)
+(simplifying-apply-generic 'add (make-complex-from-real-imag 4 0) (make-integer 8))
+;; EO: (integer . 12)
+(simplifying-apply-generic 'sub (make-real 3.5) (make-real 1.5))
+;; EO: (integer . 2)
+(simplifying-apply-generic 'div (make-rational 3 2) (make-integer 9))
+;; EO: (rational 1 . 6)
+(simplifying-apply-generic 'add (make-rational 1 3) (make-rational 2 3))
+;; EO: (integer . 1)
+(newline)

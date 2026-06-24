@@ -477,98 +477,108 @@ Some tests:
 
 Solution:
 
-The first thing we must do in order to implement this method of simplifying our data objects is to, like how the exercise states, define the generic operation `project`. This means that within each data package we should define how to lower the data type into the type that's one level down in the hierarchy (basically the opposite of `raise`). We can also make use of some primitive procedures provided by the SICP/Scheme language to make our lives a little easier:
+This was the messiest of the section the first time around, mostly because `drop` is a generic procedure that *uses* generic procedures, and a too-eager simplification rule turns the recursion into a loop. The rework cleans up three things at once: where the `project` declarations live, how to decide when to simplify, and how to layer `drop` so it doesn't fight the dispatcher that wraps it.
+
+#### The projects module
+
+`project` is the dual of `raise`, so its declarations live in [`projects.rkt`](./projects.rkt) — exactly parallel to `raises.rkt`. None of the source packages know how to project themselves; the projection chain is one explicit object you can extend in one place.
 
 ```scheme
-; generic operator
-(define (project x)
-  (apply-generic 'project x))
-...
-...
-; in the complex package
+(define (install-projects)
   (define (complex->real z)
     (make-real (real-part z)))
-  (put 'project '(complex) complex->real)
-...
-...
-; in the real package
   (define (real->rational x)
     (let ((y (inexact->exact x)))
       (make-rational (numerator y) (denominator y))))
-  (put 'project '(real) real->rational)
-...
-...
-; in the rational package
-  (define (rational->integer x)
-    (make-integer (quotient (numer x) (denom x))))
+  (define (rational->integer r)
+    (make-integer (quotient (car r) (cdr r))))
+
+  (put 'project '(complex)  complex->real)
+  (put 'project '(real)     real->rational)
   (put 'project '(rational) rational->integer)
+  'done)
 ```
 
-Now then, as the exercise states, to see if we are able to perform the drop, we can project a data object and then raise it up again, then test if it is equivalent to the original data object's value. We can make use of our `equ?` procedures from before (while we're at it, make sure that `equ?` is implemented for our real and integer packages):
+A matching `(define (project x) (apply-generic 'project x))` goes into [`generics.rkt`](./generics.rkt), next to `raise`.
+
+#### `drop` and the simplifying dispatcher
+
+`drop` and `simplifying-apply-generic` both live in [`apply-generic.rkt`](./apply-generic.rkt). Two key choices keep this honest:
+
+1. **`drop` calls the basic `apply-generic` directly** for its internal `project` / `raise` / `equ?` lookups. That breaks the loop my earlier version stepped into: if `drop`'s internal `raise` went through the simplifying dispatcher, the dispatcher would call `drop` again, which would call `raise` again, and so on. By using the un-simplifying dispatcher inside `drop`, the recursion terminates at the value level instead of the dispatcher level.
+2. **The wrapper drops only *tower-typed* results**, not based on the op name. Earlier I had `reduce` switching on `'add` / `'sub` / `'mul` / `'div` — brittle and op-by-op. The cleaner rule is structural: a result is droppable iff its type tag is in the tower. Booleans (from `equ?` / `=zero?`) aren't pairs, bare scheme-numbers have a non-tower tag, and complex internals (`'rectangular` / `'polar`) aren't in the tower either. One predicate, no enumeration:
 
 ```scheme
 (define (drop x)
   (let ((type (type-tag x)))
-    (if (= (find-type-level type) 0)
-        x
-        (let* ((projected (project x))
-               (raised (raise projected)))
-          (if (equ? x raised)
-              (drop projected)
-              x)))))
+    (cond ((not (type-level type)) x)
+          ((= (type-level type) 0) x)
+          (else
+           (let ((projected (apply-generic 'project x)))
+             (if (apply-generic 'equ? x (apply-generic 'raise projected))
+                 (drop projected)
+                 x))))))
+
+(define (tower-value? x)
+  (and (pair? x) (type-level (type-tag x))))
+
+(define (simplifying-apply-generic op . args)
+  (let ((result (apply tower-apply-generic op args)))
+    (if (tower-value? result) (drop result) result)))
 ```
 
-Let's go ahead and test these out before implementing them in our `apply-generic` procedure:
+#### How this relates to the book
 
-```scheme
-> (project (raise (raise int_n)))
-(rational 1 . 1)
-> (project (project (raise (raise int_n))))
-1
-> (drop (raise int_n))
-1
-> (drop (raise (raise int_n)))
-1
-> (drop (raise (raise (raise int_n))))
-1
-```
+2.83 declared the tower, 2.84 used it to dispatch upward, and 2.85 closes the loop by collapsing back down. `project` and `raise` form an adjoint pair, so "can we simplify?" becomes a single structural question: does projecting and re-raising land you back where you started? The book is teaching that the simplification rule itself is *not operation-specific* — it is a property of the tower. The op-name `reduce` switch in my earlier draft hid that lesson; the `tower-value?` predicate exposes it. Architecturally, `projects.rkt` mirrors `raises.rkt` so the tower's two structural primitives sit side by side, and `drop` is layered *below* the simplifying dispatcher (it uses the basic `apply-generic`) so the dispatcher's wrap is non-reentrant.
 
-As we can see, no matter what level our data object is in the type hierarchy, `drop` and `project` work as intended.
-
-Now then, in order to implement this new `drop` procedure into our `apply-generic` procedure, we first must establish the rules for _when_ it makes sense to try to drop the result. Otherwise, we may run into trouble if we try dropping the result of certain generic procedures (such as our predicate `equ?` procedure that is used in `drop` itself). The only such times we really care about dropping the result is when arithmetic is involved. So then, we can implement a predicate procedure that checks if the given generic operation is one of `add`, `sub`, `mul`, or `div`, and if it is, we can attempt to drop the result of our generic `apply` procedure:
-
-```scheme
-; helper procedure for identifying when to drop the result
-  (define (reduce x)
-    (cond ((eq? op 'add) (drop x))
-          ((eq? op 'sub) (drop x))
-          ((eq? op 'mul) (drop x))
-          ((eq? op 'div) (drop x))
-          (else x)))
-...
-...
-; drop result returned from our generic apply
-  (let* ((type-tags (map type-tag args))
-         (proc (get op type-tags)))
-    (if proc
-        (reduce (apply proc (map contents args)))
-        (let ((target-type-level (find-highest-type-level)))
-          (apply apply-generic op (map (lambda (arg)
-                                         (raise-to arg target-type-level))
-                                       args))))))
-```
-
-And for some final tests:
+Some tests:
 
 ```scheme
 > (drop (make-complex-from-real-imag 4 0))
-4
-> (add (make-complex-from-real-imag 4 0) (make-integer 8))
-12
-> (sub (make-real 3.5) (make-real 1.5))
-2
-> (div (make-rational 3 2) (make-integer 9))
+(integer . 4)
+> (drop (make-complex-from-real-imag 1.5 0))
+(rational 3 . 2)
+> (drop (make-complex-from-real-imag 2 3))
+(complex rectangular 2 . 3)
+> (drop (make-real 5.0))
+(integer . 5)
+
+> (simplifying-apply-generic 'add (make-complex-from-real-imag 4 0) (make-integer 8))
+(integer . 12)
+> (simplifying-apply-generic 'sub (make-real 3.5) (make-real 1.5))
+(integer . 2)
+> (simplifying-apply-generic 'div (make-rational 3 2) (make-integer 9))
 (rational 1 . 6)
+> (simplifying-apply-generic 'add (make-rational 1 3) (make-rational 2 3))
+(integer . 1)
+```
+
+#### Why `drop` never stops at `real`
+
+A subtle but important consequence of this implementation: with the `project` / `raise` pair we wrote, `drop` will **never** return a `(real . _)` value. The real rung is, in practice, a pass-through.
+
+The cause is that `real→rational` is implemented via `inexact->exact`, which preserves every bit of an IEEE 754 float:
+
+```scheme
+(inexact->exact 1.5)  ; => 3/2
+(inexact->exact 0.1)  ; => 3602879701896397/36028797018963968
+```
+
+…and the matching `rational→real` raise is `(exact->inexact (/ numer denom))`. The round-trip is lossless by construction: the float's exact rational is, by definition, the exact value of *that* float, so re-converting rounds back to the same float. `equ?` always says yes, and `drop` always continues past real.
+
+```scheme
+> (drop (make-real 1.5))
+(rational 3 . 2)
+> (drop (make-real 0.1))
+(rational 3602879701896397 . 36028797018963968)
+> (drop (make-real 5.0))
+(integer . 5)
+```
+
+So with this `project` / `raise` pair, the possible final destinations of `drop` are `integer`, `rational`, or `complex` (only when imag-part ≠ 0). The `real` rung still earns its keep elsewhere — it's where inexact arithmetic happens, where `(add 1.5 2.5)` lives — but `drop`'s output set just doesn't include it.
+
+To make values like `0.1` actually stop at `real`, we'd need a *lossy* `real→rational` (e.g., one that rounds to a small-denominator rational), so the round-trip would fail `equ?` for fragile floats. That's an aesthetic call, not the book's algorithm; the book's criterion is exactly the lossless round-trip, so the algorithm — applied faithfully — agrees with us. The exercise's prose ("1.5 + 0i can be lowered as far as real") is just loose phrasing of an example.
+
 ```
 
 ---

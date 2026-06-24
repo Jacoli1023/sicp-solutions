@@ -2,7 +2,7 @@
 (#%require "tags.rkt" "table.rkt" "tower.rkt" "generics.rkt" "apply-generic.rkt"
            "pkg-scheme-number.rkt" "pkg-integer.rkt" "pkg-rational.rkt"
            "pkg-real.rkt" "pkg-polar.rkt" "pkg-rectangular.rkt" "pkg-complex.rkt"
-           "coercions.rkt" "raises.rkt")
+           "coercions.rkt" "raises.rkt" "projects.rkt")
 (#%provide (all-defined)
            (all-from "tags.rkt")
            (all-from "table.rkt")
@@ -17,7 +17,8 @@
            (all-from "pkg-rectangular.rkt")
            (all-from "pkg-complex.rkt")
            (all-from "coercions.rkt")
-           (all-from "raises.rkt"))
+           (all-from "raises.rkt")
+           (all-from "projects.rkt"))
 
 ; procedure helps us load packages with a clean slate
 (define (using . installers)
@@ -34,4 +35,5 @@
   (install-polar-package)
   (install-complex-package)
   (install-coercions)
-  (install-raises))
+  (install-raises)
+  (install-projects))
